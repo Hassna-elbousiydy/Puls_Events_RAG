@@ -1,0 +1,29 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Local raw / generated data
+data/raw/*.csv
+data/interim/*
+data/processed/*
+
+# Generated FAISS index
+vectorstore/*
+
+# Generated reports
+reports/*
+
+# IDE / OS
+.vscode/
+.DS_Store
+Thumbs.db
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!reports/.gitkeep
+!vectorstore/.gitkeep

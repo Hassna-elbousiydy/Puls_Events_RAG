@@ -1,0 +1,11 @@
+﻿.git
+.gitignore
+.env
+__pycache__
+*.pyc
+.pytest_cache
+data/raw/
+data/interim/
+data/processed/
+vectorstore/
+reports/
