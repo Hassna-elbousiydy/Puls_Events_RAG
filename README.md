@@ -581,7 +581,14 @@ d'amélioration.
 
 ### Étape 2 - Pré-processing des données OpenAgenda
 
-À venir.
+En cours.
+
+- L'export CSV OpenAgenda a été récupéré et exploré.
+- 24 601 événements bruts ont été analysés.
+- Le périmètre géographique étudié est la région Pays de la Loire.
+- Les champs géographiques et temporels ont été identifiés.
+- La distribution des agendas sources et des mots-clés a été analysée afin d'étudier la pertinence culturelle des événements.
+- Le nettoyage définitif, les règles de sélection culturelle, la récupération reproductible des données et les tests unitaires restent à finaliser.
 
 Les prochaines tâches concerneront notamment :
 
@@ -619,16 +626,41 @@ Projet réalisé dans le cadre de la formation **Data Engineer**.
 
 ## Statut du projet
 
-🚧 **En cours de développement**
+Projet en cours de développement.
 
-Étape actuelle :
+- **Étape 1 : terminée**
+  - environnement Docker reproductible ;
+  - Python 3.12 ;
+  - LangChain ;
+  - FAISS CPU ;
+  - Mistral ;
+  - accès API Mistral vérifié ;
+  - dépendances et documentation configurées.
 
-```text
-Étape 1 - Préparation de l'environnement
-```
+- **Étape 2 : en cours**
+  - export OpenAgenda récupéré ;
+  - structure du CSV analysée ;
+  - périmètre Pays de la Loire identifié ;
+  - profil temporel analysé ;
+  - sources et mots-clés étudiés pour préparer la sélection culturelle ;
+  - pré-processing définitif et tests unitaires à finaliser.
 
-Prochaine étape :
+- **Étape 3 : à réaliser**
+  - chunking ;
+  - embeddings ;
+  - indexation FAISS.
 
-```text
-Étape 2 - Pré-processing des données OpenAgenda
-```
+- **Étape 4 : à réaliser**
+  - intégration LangChain ;
+  - génération avec Mistral ;
+  - système RAG et évaluation.
+
+### Prochaine action
+
+Finaliser les règles de pré-processing des événements OpenAgenda, notamment :
+
+1. le filtrage temporel ;
+2. la sélection des événements culturels ;
+3. la gestion des données manquantes ;
+4. la préparation des textes et métadonnées ;
+5. les tests unitaires permettant de garantir le périmètre géographique et temporel.

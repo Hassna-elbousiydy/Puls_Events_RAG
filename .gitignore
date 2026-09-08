@@ -7,23 +7,25 @@ venv/
 
 # Secrets
 .env
+.env.*
+!.env.example
 
-# Local raw / generated data
-data/raw/*.csv
-data/interim/*
-data/processed/*
+# Donnees brutes et intermediaires
+/data/raw/*
+!/data/raw/.gitkeep
+/data/interim/*
+!/data/interim/.gitkeep
+/data/processed/*
+!/data/processed/.gitkeep
 
-# Generated FAISS index
-vectorstore/*
+# Index FAISS
+/vectorstore/*
+!/vectorstore/.gitkeep
 
-# Generated reports
-reports/*
+# Rapports temporaires ; les rapports finaux restent versionnables
+/reports/generated/
 
 # IDE / OS
 .vscode/
 .DS_Store
 Thumbs.db
-!data/interim/.gitkeep
-!data/processed/.gitkeep
-!reports/.gitkeep
-!vectorstore/.gitkeep

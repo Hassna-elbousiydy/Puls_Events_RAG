@@ -5,4 +5,9 @@
     working_dir: /app
     volumes:
       - .:/app
+    mem_limit: 2g
+    cpus: 2.0
+    environment:
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
     command: python scripts/check_environment.py
