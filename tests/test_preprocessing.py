@@ -40,9 +40,9 @@ REFERENCE_DATE = pd.Timestamp(
 ).tz_convert("UTC")
 
 HISTORY_CUTOFF = (
-    REFERENCE_DATE
+    REFERENCE_DATE.tz_convert("Europe/Paris")
     - pd.DateOffset(years=1)
-)
+).tz_convert("UTC")
 
 EXCLUDED_AGENDA_TERMS = [
     "mes événements france travail",

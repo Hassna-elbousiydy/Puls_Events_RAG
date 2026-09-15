@@ -665,11 +665,11 @@ def main() -> None:
     )
 
     cutoff_date = (
-        reference_date
+        reference_date.tz_convert("Europe/Paris")
         - pd.DateOffset(
             years=1
         )
-    )
+    ).tz_convert("UTC")
 
     print(
         f"Date de référence : {reference_date}"

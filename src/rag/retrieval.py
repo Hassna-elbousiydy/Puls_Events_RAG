@@ -163,7 +163,7 @@ class EventRetriever:
         search_k:
             Nombre maximum de chunks conservés après filtrage.
         fetch_k:
-            Nombre de voisins FAISS examinés avant filtrage.
+            Paramètre conservé pour compatibilité ; tous les voisins sont examinés.
         top_events:
             Nombre maximum d'événements distincts retournés.
         """
@@ -188,7 +188,8 @@ class EventRetriever:
                 return False
             try:
                 timings = json.loads(metadata.get("eligible_timings_json", "[]"))
-                return any(pd.Timestamp(t["end"]) >= max(lower, cutoff)
+                return any(pd.Timestamp(t["begin"]) <= pd.Timestamp(t["end"])
+                           and pd.Timestamp(t["end"]) >= max(lower, cutoff)
                            and (upper is None or pd.Timestamp(t["begin"]) < upper)
                            for t in timings)
             except (ValueError, TypeError, KeyError):
@@ -241,7 +242,10 @@ class EventRetriever:
                     "source_agenda": metadata.get(
                         "source_agenda"
                     ),
-                    "eligible_timings_json": metadata.get("eligible_timings_json", "[]"),
+                    "eligible_timings_json": json.dumps([t for t in json.loads(metadata.get("eligible_timings_json", "[]"))
+                        if pd.Timestamp(t["begin"]) <= pd.Timestamp(t["end"])
+                        and pd.Timestamp(t["end"]) >= max(lower, cutoff)
+                        and (upper is None or pd.Timestamp(t["begin"]) < upper)], ensure_ascii=False),
                     "best_score": float(score),
                     "matched_chunk_ids": [],
                 }
