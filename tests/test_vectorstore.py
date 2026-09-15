@@ -65,7 +65,7 @@ EXPECTED_INDEX_TYPE = "IndexFlatL2"
 
 REFERENCE_DATE = os.getenv(
     "PULS_REFERENCE_DATE",
-    "2026-09-08",
+    pd.Timestamp.now(tz="Europe/Paris").date().isoformat(),
 )
 
 
@@ -339,7 +339,7 @@ def test_faiss_vector_count(
 
     assert (
         vectorstore.index.ntotal
-        == 15237
+        == len(chunks)
     )
 
 
@@ -425,6 +425,7 @@ def test_all_chunk_ids_are_indexed(
 
 def test_all_events_are_indexed(
     vectorstore: FAISS,
+    chunks: list[dict],
 ) -> None:
     """Vérifie que les 13 380 événements sont représentés."""
 
@@ -452,7 +453,7 @@ def test_all_events_are_indexed(
             )
         )
 
-    assert len(event_uids) == 13380
+    assert event_uids == {str(record["uid"]) for record in chunks}
 
 
 # ---------------------------------------------------------------------

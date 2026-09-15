@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-09-14T21:02:03.906447+00:00",
+  "model": "mistral-small-2603",
+  "method": "HTTP direct, sans LangChain/FAISS, sans retry",
+  "status": "blocked_mistral_429",
+  "models_http": 200,
+  "model_available": true,
+  "chat_http": 429,
+  "provider_code": "1300",
+  "error": "Limite Mistral atteinte (HTTP 429). Vérifiez les limites et l’usage du workspace. Aucune nouvelle tentative automatique."
+}

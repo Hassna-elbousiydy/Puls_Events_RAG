@@ -14,6 +14,9 @@ Il n'effectue aucun appel au modèle Chat Mistral.
 from __future__ import annotations
 
 import os
+import json
+import pandas as pd
+from src.rag.errors import invoke_safely
 from collections import OrderedDict
 from pathlib import Path
 from typing import Any
@@ -34,6 +37,7 @@ class EventRetriever:
         self,
         index_path: Path | str = DEFAULT_INDEX_PATH,
         embedding_model: str = DEFAULT_EMBEDDING_MODEL,
+        embeddings: Any | None = None,
     ) -> None:
         """Charge les embeddings et l'index FAISS."""
 
@@ -41,7 +45,7 @@ class EventRetriever:
 
         api_key = os.getenv("MISTRAL_API_KEY")
 
-        if not api_key:
+        if not api_key and embeddings is None:
             raise RuntimeError(
                 "MISTRAL_API_KEY est absente du fichier .env."
             )
@@ -53,9 +57,13 @@ class EventRetriever:
                 f"Index FAISS introuvable : {self.index_path}"
             )
 
-        self.embeddings = MistralAIEmbeddings(
+        if embedding_model != DEFAULT_EMBEDDING_MODEL:
+            raise ValueError("L’index exige mistral-embed ; un autre modèle nécessite une reconstruction.")
+        self.embeddings = embeddings if embeddings is not None else MistralAIEmbeddings(
             model=embedding_model,
             api_key=api_key,
+            max_retries=0,
+            timeout=30,
         )
 
         self.vectorstore = FAISS.load_local(
@@ -64,6 +72,8 @@ class EventRetriever:
             allow_dangerous_deserialization=True,
         )
 
+        if self.vectorstore.index.d != 1024:
+            raise ValueError("Dimension de l’index incompatible avec mistral-embed.")
         self.documents_by_uid = self._index_documents_by_uid()
 
     def _index_documents_by_uid(self) -> dict[str, list]:
@@ -139,6 +149,8 @@ class EventRetriever:
         search_k: int = 20,
         fetch_k: int = 500,
         top_events: int = 5,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> list[dict[str, Any]]:
         """Recherche les événements les plus pertinents.
 
@@ -161,20 +173,33 @@ class EventRetriever:
                 "La question ne peut pas être vide."
             )
 
-        metadata_filter = None
+        if min(search_k, fetch_k, top_events) <= 0:
+            raise ValueError("Les nombres de résultats doivent être strictement positifs.")
+        reference = pd.Timestamp(os.getenv("PULS_REFERENCE_DATE") or pd.Timestamp.now(tz="Europe/Paris").date(), tz="Europe/Paris")
+        cutoff = (reference - pd.DateOffset(years=1)).tz_convert("UTC")
+        lower = pd.Timestamp(start_date, tz="Europe/Paris").tz_convert("UTC") if start_date else cutoff
+        upper = (pd.Timestamp(end_date, tz="Europe/Paris") + pd.DateOffset(days=1)).tz_convert("UTC") if end_date else None
+        if upper is not None and lower >= upper:
+            raise ValueError("La période demandée est inversée.")
+        city_matches = self._city_filter(city) if city else lambda metadata: True
 
-        if city:
-            metadata_filter = self._city_filter(
-                city
-            )
+        def metadata_filter(metadata):
+            if metadata.get("region") != "Pays de la Loire" or not city_matches(metadata):
+                return False
+            try:
+                timings = json.loads(metadata.get("eligible_timings_json", "[]"))
+                return any(pd.Timestamp(t["end"]) >= max(lower, cutoff)
+                           and (upper is None or pd.Timestamp(t["begin"]) < upper)
+                           for t in timings)
+            except (ValueError, TypeError, KeyError):
+                return False
 
-        raw_results = (
-            self.vectorstore.similarity_search_with_score(
-                question,
-                k=search_k,
-                filter=metadata_filter,
-                fetch_k=fetch_k,
-            )
+        # IndexFlatL2 réalise déjà une recherche exhaustive. Examiner tous les
+        # voisins évite de perdre une ville rare ou une période après filtrage.
+        raw_results = invoke_safely(
+            self.vectorstore.similarity_search_with_score,
+            question, k=search_k, filter=metadata_filter,
+            fetch_k=self.vectorstore.index.ntotal,
         )
 
         grouped: OrderedDict[
@@ -216,6 +241,7 @@ class EventRetriever:
                     "source_agenda": metadata.get(
                         "source_agenda"
                     ),
+                    "eligible_timings_json": metadata.get("eligible_timings_json", "[]"),
                     "best_score": float(score),
                     "matched_chunk_ids": [],
                 }
@@ -306,7 +332,8 @@ class EventRetriever:
                 f"Lieu : {event['location_text']}\n"
                 f"Dates : {event['date_range']}\n"
                 f"URL : {event['canonical_url']}\n"
-                f"Informations :\n"
+                f"Créneaux admissibles (UTC) : {event.get('eligible_timings_json', 'non disponibles')}\n"
+                f"Informations descriptives (peuvent évoquer des dates historiques) :\n"
                 f"{combined_content}"
             )
 
@@ -331,6 +358,8 @@ class EventRetriever:
         search_k: int = 20,
         fetch_k: int = 500,
         top_events: int = 5,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> tuple[list[dict[str, Any]], str]:
         """Effectue retrieval + construction du contexte."""
 
@@ -340,6 +369,8 @@ class EventRetriever:
             search_k=search_k,
             fetch_k=fetch_k,
             top_events=top_events,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         context = self.build_context(

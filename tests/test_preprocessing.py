@@ -31,7 +31,7 @@ TARGET_REGION = "Pays de la Loire"
 
 REFERENCE_DATE_STR = os.getenv(
     "PULS_REFERENCE_DATE",
-    "2026-09-08",
+    pd.Timestamp.now(tz="Europe/Paris").date().isoformat(),
 )
 
 REFERENCE_DATE = pd.Timestamp(

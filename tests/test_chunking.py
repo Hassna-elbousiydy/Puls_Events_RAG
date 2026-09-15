@@ -212,7 +212,7 @@ def test_all_source_events_are_represented(
         f"{sorted(unexpected_uids)[:20]}"
     )
 
-    assert len(source_uids) == 13380
+    assert len(source_uids) == len(source_events)
 
 
 def test_chunk_contents_are_not_empty(

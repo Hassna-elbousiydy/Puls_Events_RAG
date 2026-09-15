@@ -1,4 +1,4 @@
-﻿.git
+.git
 .gitignore
 .env
 __pycache__
@@ -9,3 +9,12 @@ data/interim/
 data/processed/
 vectorstore/
 reports/
+
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+
+.rebuild-*/
+**/*.previous-*/

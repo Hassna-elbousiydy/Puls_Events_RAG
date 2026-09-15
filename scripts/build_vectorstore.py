@@ -21,6 +21,7 @@ import json
 import math
 import os
 import shutil
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -364,20 +365,14 @@ def main() -> None:
         f"Répertoire sortie      : {args.output_dir}"
     )
 
-    if args.output_dir.exists():
-
-        print(
-            "\nSuppression de l'ancien index de sortie..."
-        )
-
-        shutil.rmtree(
-            args.output_dir
-        )
+    final_output_dir = args.output_dir
+    final_output_dir.parent.mkdir(parents=True, exist_ok=True)
+    args.output_dir = Path(tempfile.mkdtemp(prefix=".building-", dir=final_output_dir.parent))
 
     embeddings = MistralAIEmbeddings(
         model=MODEL_NAME,
         api_key=api_key,
-        max_retries=5,
+        max_retries=0,
         timeout=120,
     )
 
@@ -584,6 +579,20 @@ def main() -> None:
         raise RuntimeError(
             "Le docstore rechargé est incomplet."
         )
+
+    if final_output_dir.exists():
+        backup = final_output_dir.with_name(final_output_dir.name + ".previous-" + str(time.time_ns()))
+        final_output_dir.rename(backup)
+        try:
+            args.output_dir.rename(final_output_dir)
+        except Exception:
+            backup.rename(final_output_dir)
+            raise
+    else:
+        args.output_dir.rename(final_output_dir)
+    args.output_dir = final_output_dir
+    faiss_file = final_output_dir / "index.faiss"
+    pickle_file = final_output_dir / "index.pkl"
 
     elapsed_seconds = (
         time.perf_counter()

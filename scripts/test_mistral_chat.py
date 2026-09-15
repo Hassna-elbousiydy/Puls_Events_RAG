@@ -18,7 +18,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_mistralai import ChatMistralAI
 
 
-MODEL_NAME = "mistral-small-2603"
+MODEL_NAME = os.getenv("MISTRAL_CHAT_MODEL", "mistral-small-2603")
 
 
 CONTEXT = """
@@ -66,7 +66,7 @@ def main() -> None:
     llm = ChatMistralAI(
         model=MODEL_NAME,
         temperature=0,
-        max_retries=5,
+        max_retries=0,
         api_key=api_key,
     )
 

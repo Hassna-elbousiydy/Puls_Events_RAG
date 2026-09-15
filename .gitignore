@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -29,3 +29,12 @@ venv/
 .vscode/
 .DS_Store
 Thumbs.db
+# Credentials et fichiers temporaires
+*.pem
+*.key
+credentials*.json
+credentials*.yaml
+*.tmp
+
+.rebuild-*/
+**/*.previous-*/

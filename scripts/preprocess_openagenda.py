@@ -465,7 +465,7 @@ def parse_and_filter_timings(
         ):
             continue
 
-        if end >= cutoff_date:
+        if begin <= end and end >= cutoff_date:
             eligible_timings.append(
                 {
                     "begin": begin.isoformat(),
