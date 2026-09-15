@@ -1,13 +1,13 @@
 {
-  "timestamp_utc": "2026-09-14T21:03:39.735105+00:00",
+  "timestamp_utc": "2026-09-15T08:43:50.785781+00:00",
   "mode": "generation",
   "cases_total": 25,
   "results": [
     {
       "id": "q01",
       "question": "Où voir l’exposition Plants and People au Musée d’arts de Nantes ?",
-      "status": "failed_api",
-      "error": "Connexion à Mistral impossible. Vérifiez le réseau et le proxy."
+      "status": "blocked_mistral_429",
+      "error": "Limite Mistral atteinte (HTTP 429). Vérifiez les limites et l’usage du workspace. Aucune nouvelle tentative automatique."
     }
   ],
   "status": "blocked_or_failed",

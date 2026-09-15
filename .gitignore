@@ -38,3 +38,6 @@ credentials*.yaml
 
 .rebuild-*/
 **/*.previous-*/
+
+.refresh-*/
+refreshed_snapshot/

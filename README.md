@@ -1,666 +1,296 @@
 # Puls-Events RAG
 
-## Présentation
+POC OpenClassrooms de recommandation d’événements culturels en **Pays de la Loire**.
+Python et Pandas préparent les données OpenAgenda ; **mistral-embed**, **FAISS CPU**
+et **LangChain + Chat Mistral** assurent recherche et génération en français.
 
-Ce projet est un Proof of Concept (POC) de système RAG
-(**Retrieval-Augmented Generation**) développé pour l'entreprise **Puls-Events**.
+La génération est actuellement bloquée par un **HTTP 429 Mistral, code 1300**,
+reproduit avec un appel HTTP direct minimal. Un résultat de retrieval réussi
+ne constitue pas une génération réussie. Les preuves disponibles sont dans
+`reports/evidence/` et l’état de conformité dans `docs/CONFORMITE.md`.
 
-Puls-Events propose une plateforme permettant aux utilisateurs de découvrir
-des événements culturels. L'objectif de ce projet est d'étudier la faisabilité
-d'un assistant intelligent capable de recommander des événements pertinents
-à partir de données issues d'**OpenAgenda**.
+## Architecture
 
-Le système RAG combinera :
-
-- **LangChain** pour orchestrer les différentes briques du pipeline ;
-- **Mistral AI** pour les embeddings et la génération de réponses ;
-- **FAISS** pour l'indexation et la recherche vectorielle ;
-- **Python** pour le traitement des données et le développement du système ;
-- **Docker** pour disposer d'un environnement reproductible.
-
----
-
-## Objectifs du projet
-
-Le système final devra permettre de :
-
-1. récupérer et charger les événements issus d'OpenAgenda ;
-2. nettoyer et structurer les données ;
-3. filtrer les événements selon un périmètre géographique défini ;
-4. conserver uniquement les événements respectant les contraintes temporelles
-   de la mission ;
-5. construire un texte exploitable pour chaque événement ;
-6. découper les textes en chunks lorsque cela est nécessaire ;
-7. générer les embeddings des contenus ;
-8. créer un index vectoriel avec FAISS ;
-9. enregistrer les métadonnées associées aux événements ;
-10. effectuer des recherches par similarité sémantique ;
-11. utiliser LangChain pour orchestrer le système RAG ;
-12. utiliser Mistral pour générer les réponses de l'assistant ;
-13. permettre la reconstruction de la base vectorielle à la demande ;
-14. tester automatiquement la qualité et la conformité des données ;
-15. évaluer le système à partir d'un jeu de questions/réponses annoté.
-
----
-
-## Architecture générale prévue
-
-Le pipeline suivra globalement le fonctionnement suivant :
-
-```text
-OpenAgenda
-    |
-    v
-Données brutes
-    |
-    v
-Pré-processing / nettoyage / filtrage
-    |
-    v
-Données structurées
-    |
-    v
-Chunking
-    |
-    v
-Embeddings Mistral
-    |
-    v
-Index vectoriel FAISS
-    |
-    v
-Recherche sémantique
-    |
-    v
-Contexte récupéré
-    |
-    v
-LangChain + Mistral
-    |
-    v
-Réponse / recommandation utilisateur
+```mermaid
+flowchart TD
+  A[OpenAgenda via OpenDataSoft] --> B[Nettoyage et filtrage]
+  B --> C[Chunks et métadonnées]
+  C --> D[Embeddings Mistral]
+  D --> E[FAISS CPU]
+  Q[Question et filtres] --> R[Embedding de la question]
+  R --> E
+  E --> S[Événements distincts et contexte]
+  S --> P[Prompt LangChain]
+  P --> M[Chat Mistral]
+  M --> F[Réponse française sourcée]
+  M --> X[Erreur API explicite]
 ```
 
----
+L’historique conversationnel n’est pas nécessaire dans la mission et n’est pas ajouté.
+Le retrieval réutilise `src/rag/retrieval.py` ; le pipeline ne le duplique pas.
 
-## Contraintes principales de la mission
+## Prérequis et installation
 
-Le POC doit respecter plusieurs contraintes :
+Utiliser Python 3.12, Git et une clé API Mistral autorisée. Docker Desktop avec
+conteneurs Linux est la voie recommandée sur Windows. Le conteneur contient un venv.
+Le moteur Docker n’est pas disponible dans l’environnement Work de cet audit :
+les commandes Docker doivent encore être exécutées sur une machine qui en dispose.
 
-- les données doivent provenir d'OpenAgenda ;
-- un périmètre géographique doit être sélectionné ;
-- les événements utilisés doivent respecter la contrainte de récence
-  demandée dans la mission ;
-- la base vectorielle doit pouvoir être reconstruite à la demande ;
-- FAISS doit être utilisé pour l'indexation vectorielle ;
-- LangChain doit être utilisé dans le système RAG ;
-- Mistral doit être utilisé pour les modèles ;
-- le projet doit être versionné avec Git ;
-- les dépendances doivent être documentées ;
-- des tests Python doivent contrôler les données utilisées ;
-- un jeu de questions/réponses annoté devra être créé pour l'évaluation.
-
-Le périmètre géographique et les règles exactes de préparation des données
-seront documentés pendant l'étape 2.
-
----
-
-## Environnement de développement
-
-L'environnement actuellement utilisé est basé sur :
-
-- **Python 3.12.14**
-- **LangChain 1.4.0**
-- **LangChain Community 0.4.2**
-- **LangChain Mistral 1.1.6**
-- **Mistral SDK 2.9.4**
-- **FAISS CPU 1.15.0**
-- **NumPy 2.5.3**
-- **Docker**
-- **Docker Compose**
-- **Git**
-
-Un environnement virtuel Python est créé à l'intérieur du conteneur Docker
-afin d'isoler les dépendances du projet.
-
-FAISS est installé dans sa version **CPU**, conformément aux contraintes
-de la mission.
-
----
-
-## Structure du projet
-
-```text
-04_Puls_Events_RAG/
-|
-|-- data/
-|   |-- raw/
-|   |   `-- evenements-publics-openagenda.csv
-|   |
-|   |-- interim/
-|   |   `-- .gitkeep
-|   |
-|   `-- processed/
-|       `-- .gitkeep
-|
-|-- docs/
-|
-|-- reports/
-|   `-- .gitkeep
-|
-|-- scripts/
-|   |-- check_environment.py
-|   `-- check_mistral_access.py
-|
-|-- src/
-|
-|-- tests/
-|
-|-- vectorstore/
-|   `-- .gitkeep
-|
-|-- .dockerignore
-|-- .env
-|-- .env.example
-|-- .gitignore
-|-- compose.yaml
-|-- Dockerfile
-|-- requirements.txt
-`-- README.md
-```
-
-### Description des dossiers
-
-#### `data/raw/`
-
-Contient les données brutes récupérées depuis OpenAgenda.
-
-Le fichier actuellement utilisé est :
-
-```text
-data/raw/evenements-publics-openagenda.csv
-```
-
-Les données brutes ne sont pas versionnées dans Git.
-
-#### `data/interim/`
-
-Contiendra les données obtenues pendant les étapes intermédiaires de
-pré-processing.
-
-#### `data/processed/`
-
-Contiendra les données finales nettoyées et structurées, prêtes à être
-vectorisées et indexées.
-
-#### `scripts/`
-
-Contient les scripts exécutables du projet.
-
-Actuellement :
-
-- `check_environment.py` : vérifie les bibliothèques Python et le
-  fonctionnement de FAISS CPU ;
-- `check_mistral_access.py` : vérifie l'accès réel à l'API Mistral.
-
-D'autres scripts seront ajoutés pour le pré-processing, la vectorisation et
-la reconstruction de l'index FAISS.
-
-#### `src/`
-
-Contiendra le code source principal du système RAG.
-
-#### `tests/`
-
-Contiendra les tests unitaires et les contrôles automatiques du projet.
-
-Les tests devront notamment vérifier que les événements utilisés respectent
-le périmètre géographique et temporel choisi.
-
-#### `vectorstore/`
-
-Contiendra les fichiers générés pour l'index vectoriel FAISS.
-
-L'index étant reconstructible à partir des données et des scripts, les fichiers
-générés dans ce dossier ne seront pas versionnés dans Git.
-
-#### `reports/`
-
-Contiendra les résultats d'évaluation et les fichiers générés pendant
-l'analyse du POC.
-
-#### `docs/`
-
-Contiendra la documentation complémentaire du projet.
-
----
-
-## Données
-
-Les données OpenAgenda sont actuellement stockées localement dans :
-
-```text
-data/raw/evenements-publics-openagenda.csv
-```
-
-Le fichier brut est volontairement exclu du dépôt Git afin d'éviter de
-versionner un fichier de données volumineux.
-
-La reproductibilité du projet reposera sur :
-
-- les scripts de traitement ;
-- les règles de filtrage documentées ;
-- les dépendances ;
-- le pipeline de vectorisation ;
-- la possibilité de reconstruire l'index FAISS.
-
-Le nettoyage et la validation détaillée des données seront réalisés pendant
-l'étape 2.
-
----
-
-## Installation
-
-### Prérequis
-
-Avant de lancer le projet, les outils suivants doivent être installés :
-
-- Git ;
-- Docker Desktop ;
-- Docker Compose.
-
-Docker doit fonctionner avec des conteneurs Linux.
-
-Pour vérifier l'installation :
+Depuis PowerShell :
 
 ```powershell
-git --version
-docker --version
-docker compose version
-docker info --format '{{.OSType}}'
-```
-
-La dernière commande doit retourner :
-
-```text
-linux
-```
-
----
-
-## Configuration de Mistral
-
-Le projet utilise l'API Mistral.
-
-Un modèle du fichier de configuration est fourni :
-
-```text
-.env.example
-```
-
-Créer le fichier local `.env` avec :
-
-```powershell
+git clone https://github.com/Hassna-elbousiydy/Puls_Events_RAG.git
+cd Puls_Events_RAG
+git switch fix/complete-rag-poc
 Copy-Item .env.example .env
-```
-
-Le contenu du fichier doit suivre cette structure :
-
-```dotenv
-MISTRAL_API_KEY=votre_cle_api_mistral
-```
-
-La véritable clé API ne doit jamais être enregistrée dans Git.
-
-Le fichier `.env` est donc ajouté au `.gitignore`.
-
----
-
-## Gestion des dépendances
-
-Les dépendances Python du projet sont enregistrées dans :
-
-```text
-requirements.txt
-```
-
-Les principales dépendances sont :
-
-```text
-langchain
-langchain-community
-langchain-mistralai
-mistralai
-faiss-cpu
-numpy
-python-dotenv
-```
-
-Les versions utilisées sont fixées ou contraintes afin de garantir la
-reproductibilité de l'environnement.
-
----
-
-## Construction de l'environnement Docker
-
-Depuis la racine du projet :
-
-```powershell
-docker compose build
-```
-
-Cette commande :
-
-1. utilise Python 3.12 ;
-2. crée un environnement virtuel Python dans le conteneur ;
-3. installe les dépendances de `requirements.txt` ;
-4. vérifie leur compatibilité avec `pip check`.
-
----
-
-## Vérification de l'environnement
-
-Pour vérifier que l'environnement est correctement configuré :
-
-```powershell
-docker compose run --rm rag
-```
-
-Le script contrôle notamment :
-
-- Python ;
-- LangChain ;
-- LangChain Community ;
-- l'intégration LangChain/Mistral ;
-- le SDK Mistral ;
-- NumPy ;
-- FAISS CPU ;
-- la création d'un petit index FAISS ;
-- une recherche de similarité dans cet index.
-
-Résultat obtenu :
-
-```text
-============================================================
-PULS-EVENTS RAG - VERIFICATION ENVIRONNEMENT
-============================================================
-Python              : 3.12.14
-LangChain           : 1.4.0
-LangChain Community : 0.4.2
-LangChain Mistral   : 1.1.6
-Mistral SDK         : 2.9.4
-FAISS CPU           : 1.15.0
-NumPy               : 2.5.3
-
-Test FAISS CPU       : OK
-Imports LangChain    : OK
-Integration Mistral  : OK
-
-ENVIRONNEMENT LOCAL : OK
-```
-
----
-
-## Vérification de l'accès à l'API Mistral
-
-Après avoir configuré la clé dans `.env`, exécuter :
-
-```powershell
-docker compose run --rm rag python scripts/check_mistral_access.py
-```
-
-Résultat obtenu :
-
-```text
-============================================================
-PULS-EVENTS RAG - VERIFICATION API MISTRAL
-============================================================
-Modeles accessibles : 46
-
-ACCES MISTRAL : OK
-```
-
-Cette vérification confirme que :
-
-- la clé API est correctement chargée ;
-- l'authentification auprès de Mistral fonctionne ;
-- l'environnement Docker peut communiquer avec l'API Mistral.
-
----
-
-## Reproductibilité
-
-L'environnement peut être reconstruit à partir des fichiers :
-
-```text
-Dockerfile
-compose.yaml
-requirements.txt
-.env.example
-```
-
-Pour reconstruire l'environnement sur une nouvelle machine :
-
-```powershell
-git clone <URL_DU_DEPOT>
-cd 04_Puls_Events_RAG
-Copy-Item .env.example .env
-```
-
-Ajouter ensuite une clé Mistral valide dans `.env`, puis :
-
-```powershell
+# Renseigner la clé dans .env avec votre éditeur, sans la publier.
 docker compose build
 docker compose run --rm rag
+docker compose run --rm rag python -m pip check
 ```
 
----
+La branche doit d’abord être publiée : l’audit Work a rencontré un accès GitHub 404.
+Alternative sans Docker :
 
-## Sécurité
-
-Les éléments sensibles ou générés ne doivent pas être versionnés.
-
-Sont notamment exclus de Git :
-
-```text
-.env
-data/raw/*.csv
-data/interim/*
-data/processed/*
-vectorstore/*
-reports/*
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m pip check
+python scripts/check_environment.py
 ```
 
-Les fichiers `.gitkeep` permettent néanmoins de conserver la structure des
-dossiers vides dans le dépôt.
+## Configuration
 
----
+| Variable | Usage | Défaut |
+|---|---|---|
+| `MISTRAL_API_KEY` | Secret local obligatoire pour les appels API | Aucun |
+| `MISTRAL_CHAT_MODEL` | Modèle de génération et d’évaluation | `mistral-small-2603` |
+| `PULS_REFERENCE_DATE` | Rejouer explicitement une date, YYYY-MM-DD | Date actuelle Europe/Paris |
+| `SSL_CERT_FILE` / `SSL_CERT_DIR` | Certificats de confiance, si un proxy TLS l’exige | Configuration HTTPX |
 
-## Tests
+Le modèle `mistral-small-2603` a été trouvé dans la liste réelle du compte lors
+du diagnostic du 14 septembre 2026. Sa présence ne garantit pas du quota chat.
+Le modèle d’embedding reste **mistral-embed, dimension 1024**. Il n’est pas interchangeable
+avec un autre modèle sans nouvelle vectorisation. Aucune vérification TLS n’est désactivée.
+Avec un proxy SOCKS, installer `httpx[socks]` dans l’environnement concerné.
 
-Le projet intégrera progressivement plusieurs niveaux de tests.
+## Dépendances et structure
 
-### Tests de l'environnement
+`requirements.txt` conserve les versions existantes de LangChain, Community,
+Mistral SDK, intégration Mistral et FAISS. `requirements-lock.txt`, lorsqu’il est
+présent, décrit l’environnement complet réellement résolu pendant l’audit.
 
-Déjà disponibles :
-
-```text
-scripts/check_environment.py
-scripts/check_mistral_access.py
-```
-
-### Tests des données
-
-Pendant l'étape de pré-processing, des tests Python devront vérifier notamment :
-
-- la conformité du périmètre géographique ;
-- la conformité de la période ;
-- l'absence ou la gestion correcte des données manquantes ;
-- la cohérence des données utilisées pour construire la base vectorielle.
-
-### Tests du système RAG
-
-Des tests seront ensuite ajoutés pour vérifier :
-
-- la construction de l'index FAISS ;
-- la récupération des documents ;
-- la pertinence des résultats ;
-- la génération des réponses ;
-- la qualité globale du système RAG.
-
----
-
-## Reconstruction de la base vectorielle
-
-Une contrainte importante du projet est de pouvoir reconstruire la base
-vectorielle à la demande.
-
-Le pipeline final devra donc permettre d'exécuter successivement :
-
-```text
-Données OpenAgenda
-        |
-        v
-Pré-processing
-        |
-        v
-Données propres
-        |
-        v
-Chunking
-        |
-        v
-Embeddings
-        |
-        v
-Construction de l'index FAISS
-```
-
-Les scripts correspondants seront développés au cours des prochaines étapes.
-
----
-
-## Évaluation du système RAG
-
-Un jeu de données de test contenant des couples :
-
-```text
-question / réponse annotée
-```
-
-sera créé pour évaluer la qualité du système.
-
-Les réponses générées par le RAG pourront être comparées aux réponses
-annotées afin de mesurer la qualité du POC et d'identifier les axes
-d'amélioration.
-
----
-
-## État d'avancement
-
-### Étape 1 - Préparation de l'environnement
-
-- [x] Git installé
-- [x] Docker installé
-- [x] Docker Compose installé
-- [x] Conteneurs Linux activés
-- [x] Python 3.12 opérationnel
-- [x] Environnement virtuel configuré dans Docker
-- [x] LangChain installé
-- [x] FAISS CPU installé
-- [x] SDK Mistral installé
-- [x] Intégration LangChain/Mistral installée
-- [x] Imports Python vérifiés
-- [x] Recherche FAISS testée
-- [x] Accès réel à l'API Mistral testé
-- [x] Gestion des dépendances configurée
-- [x] Environnement reproductible avec Docker
-- [x] Documentation de l'environnement créée
-
-**Statut : étape 1 techniquement fonctionnelle.**
-
-### Étape 2 - Pré-processing des données OpenAgenda
-
-En cours.
-
-- L'export CSV OpenAgenda a été récupéré et exploré.
-- 24 601 événements bruts ont été analysés.
-- Le périmètre géographique étudié est la région Pays de la Loire.
-- Les champs géographiques et temporels ont été identifiés.
-- La distribution des agendas sources et des mots-clés a été analysée afin d'étudier la pertinence culturelle des événements.
-- Le nettoyage définitif, les règles de sélection culturelle, la récupération reproductible des données et les tests unitaires restent à finaliser.
-
-Les prochaines tâches concerneront notamment :
-
-- l'analyse du fichier OpenAgenda ;
-- le choix et la validation du périmètre géographique ;
-- le filtrage temporel ;
-- le nettoyage des données ;
-- la sélection des colonnes utiles ;
-- la création du jeu de données propre ;
-- l'ajout des tests unitaires correspondants.
-
----
-
-## Technologies
-
-| Technologie | Utilisation |
+| Chemin | Fonction |
 |---|---|
-| Python | Traitement des données et développement |
-| Pandas | Pré-processing des données |
-| LangChain | Orchestration du système RAG |
-| Mistral AI | Embeddings et génération |
-| FAISS CPU | Recherche vectorielle |
-| Docker | Reproductibilité de l'environnement |
-| Git | Versionnement du projet |
+| `scripts/fetch_openagenda.py` | Export OpenAgenda par API Explore v2.1 OpenDataSoft |
+| `scripts/preprocess_openagenda.py` | Nettoyage, région, créneaux, statut et culture |
+| `scripts/build_chunks.py` | Découpage récursif LangChain |
+| `scripts/build_vectorstore.py` | Embeddings et construction FAISS avec sauvegarde |
+| `scripts/rebuild_pipeline.py` | Reconstruction isolée puis tests et activation |
+| `scripts/refresh_snapshot.py` | Retrait des événements expirés sans nouveaux embeddings |
+| `src/rag/retrieval.py` | Filtrage, recherche, déduplication et contexte |
+| `src/rag/pipeline.py` | Prompt LangChain et génération Mistral |
+| `src/rag/config.py`, `errors.py` | Configuration et erreurs explicites |
+| `src/rag/evaluation.py` | Grille de jugement sémantique Mistral |
+| `scripts/demo.py` | Démo terminal avec sources affichées avant le chat |
+| `scripts/evaluate_rag.py` | Évaluation réelle et checkpoints JSON |
+| `tests/` | Unités offline et contrôles des fichiers de données |
+| `data/raw/`, `data/processed/`, `vectorstore/` | Artefacts locaux reconstruisibles, ignorés par Git |
+| `data/evaluation/` | 25 questions et références vérifiables |
+| `reports/generated/` | Sorties de l’exécution courante |
+| `reports/evidence/` | Preuves datées sélectionnées pour versionnement |
+| `docs/` | Audit, conformité, rapport et soutenance |
 
----
+Les scripts `inspect_*`, `profile_*`, `review_cultural_filter.py` et
+`compare_openagenda_snapshots.py` restent des outils d’audit. Les anciens
+`test_rag_retrieval.py` et `test_vectorstore_search.py` sont des smoke tests historiques ;
+utiliser le module réutilisable pour la démo et l’évaluation actuelles.
 
-## Auteur
+## Acquisition OpenAgenda
 
-**Hassna EL-BOUSIYDY**
+Source : [Événements publics OpenAgenda](https://public.opendatasoft.com/explore/dataset/evenements-publics-openagenda/).
+L’API utilisée est celle de l’export public OpenDataSoft ; ce n’est pas l’API
+privée d’administration des agendas. Le périmètre est Pays de la Loire.
 
-Projet réalisé dans le cadre de la formation **Data Engineer**.
+```powershell
+docker compose run --rm rag python scripts/fetch_openagenda.py --reference-date 2026-09-15
+```
 
----
+L’export est filtré par région et dernière fin d’événement. Le nettoyage contrôle
+ensuite les créneaux réels, et pas seulement les bornes globales.
+Une source en ligne évolue : même date de référence ne signifie pas mêmes octets.
+Pour rejouer exactement un corpus, conserver le CSV brut et son empreinte SHA-256.
+L’écart historique entre comptage API (25 348) et export (24 601) n’a pas été expliqué
+par une nouvelle acquisition durant cet audit ; ne pas garantir l’exhaustivité de la plateforme.
 
-## Statut du projet
+## Pré-processing et dates
 
-Projet en cours de développement.
+```powershell
+docker compose run --rm rag python scripts/preprocess_openagenda.py --reference-date 2026-09-15
+```
 
-- **Étape 1 : terminée**
-  - environnement Docker reproductible ;
-  - Python 3.12 ;
-  - LangChain ;
-  - FAISS CPU ;
-  - Mistral ;
-  - accès API Mistral vérifié ;
-  - dépendances et documentation configurées.
+La mission combine « événements récents de moins d’un an » et « 1 an d’historique
+et événements à venir ». Règle retenue : conserver les occurrences dont la fin est
+supérieure ou égale à la date de référence moins une année calendaire, avec début
+inférieur ou égal à la fin. Les événements futurs n’ont pas de borne supérieure
+arbitraire. Une occurrence qui traverse la borne est conservée.
 
-- **Étape 2 : en cours**
-  - export OpenAgenda récupéré ;
-  - structure du CSV analysée ;
-  - périmètre Pays de la Loire identifié ;
-  - profil temporel analysé ;
-  - sources et mots-clés étudiés pour préparer la sélection culturelle ;
-  - pré-processing définitif et tests unitaires à finaliser.
+Les événements annulés sont exclus ; un filtre lexical sélectionne le périmètre
+culturel, avec exclusions d’agendas non culturels. Il peut produire des faux positifs
+ou négatifs et nécessite une revue. Les titres et descriptions vides sont rejetés.
+Les UID sont dédupliqués. Les données de lieu disponibles sont concaténées sans
+inventer de ville. Dans le snapshot initial, 92 villes manquent mais disposent de
+coordonnées. Un filtre de ville ne peut pas retrouver ces événements sans enrichissement.
 
-- **Étape 3 : à réaliser**
-  - chunking ;
-  - embeddings ;
-  - indexation FAISS.
+Les descriptions et `date_range` sont des textes d’origine et peuvent mentionner
+des dates historiques. Les créneaux admissibles structurés font autorité.
 
-- **Étape 4 : à réaliser**
-  - intégration LangChain ;
-  - génération avec Mistral ;
-  - système RAG et évaluation.
+## Chunking et indexation
 
-### Prochaine action
+```powershell
+docker compose run --rm rag python scripts/build_chunks.py
+docker compose run --rm rag python scripts/build_vectorstore.py
+```
 
-Finaliser les règles de pré-processing des événements OpenAgenda, notamment :
+`RecursiveCharacterTextSplitter` utilise **1 500 caractères**, un chevauchement
+maximal de **200 caractères** et des séparateurs de paragraphes/phrases.
+Chaque chunk conserve UID, ordre, titre, dates, ville, région, lieu et URL.
+Le rapport compare la couverture des UID et le nombre de chunks.
 
-1. le filtrage temporel ;
-2. la sélection des événements culturels ;
-3. la gestion des données manquantes ;
-4. la préparation des textes et métadonnées ;
-5. les tests unitaires permettant de garantir le périmètre géographique et temporel.
+L’index reste **IndexFlatL2** : recherche exacte, adéquate pour ce volume.
+Les scores FAISS sont des **distances L2 au carré**, pas des probabilités.
+Les fichiers `index.faiss` et `index.pkl` sont sauvegardés puis rechargés.
+Ne charger que des fichiers pickle de confiance produits ou fournis pour ce projet.
+La construction prépare un nouvel index avant de remplacer l’ancien ; une sauvegarde
+`.previous-*` reste disponible. Un échec d’embedding conserve l’index actif.
+
+## Reconstruction complète
+
+```powershell
+docker compose run --rm rag python -m scripts.rebuild_pipeline --reference-date 2026-09-15
+```
+
+Cette commande enchaîne acquisition, pré-processing, chunks, embeddings, FAISS,
+`pytest`, puis active les sorties. Les fichiers actifs restent en place en cas
+d’échec avant activation. Arrêter la démo pendant la maintenance ; l’activation
+n’est pas une transaction multi-processus destinée à la production.
+Pour repartir du CSV déjà acquis : ajouter `--from-snapshot`.
+Cette option ne récupère aucun nouvel événement ; elle recalcule les embeddings.
+
+Pour actualiser uniquement les dates, sans coût d’embedding et sans modifier la source :
+
+```powershell
+docker compose run --rm rag python -m scripts.refresh_snapshot --output refreshed_snapshot --reference-date 2026-09-15
+```
+
+Le dossier de destination doit être nouveau. Les textes inchangés réutilisent exactement
+leurs anciens vecteurs ; l’association chunk/vecteur/métadonnées est contrôlée.
+On peut tester la copie avec `--index refreshed_snapshot/vectorstore/faiss_index` dans la démo.
+Les anciens rapports restent des preuves historiques ; ne pas les lire comme des résultats actualisés.
+
+## Retrieval, génération et démo
+
+```powershell
+docker compose run --rm rag python -m scripts.demo "Où voir Plants and People à Nantes ?" --city Nantes
+docker compose run --rm rag python -m scripts.demo "Quand rencontrer Abigail Assor ?" --city Angers --start-date 2026-09-15 --end-date 2026-09-15
+docker compose run --rm rag python -m scripts.demo "Quel concert propose Comme un air de jazz ?" --city Nantes
+docker compose run --rm rag python -m scripts.demo "Quels concerts à Paris ?" --city Paris
+```
+
+Les filtres ville et période sont explicites : le POC n’extrait pas automatiquement
+toutes les contraintes d’une question libre. La date de fin passée en option est inclusive.
+Le retrieval exclut les événements périmés et regroupe les chunks par UID.
+Le prompt impose le français et l’utilisation exclusive des sources. Il demande de
+signaler une absence d’information et de ne pas inventer titre, date, lieu ou URL.
+Ces instructions réduisent le risque d’hallucination mais ne prouvent pas l’exactitude.
+
+## Diagnostic Mistral et erreurs
+
+```powershell
+docker compose run --rm rag python -m scripts.check_mistral_rate_limit
+docker compose run --rm rag python -m scripts.test_mistral_minimal
+docker compose run --rm rag python -m scripts.test_rag_pipeline
+```
+
+Le diagnostic direct réalise une lecture des modèles puis un seul petit appel chat.
+Le test minimal LangChain n’utilise ni FAISS ni contexte documentaire.
+Les erreurs 401/403, 429, timeout, réseau et réponse vide sont explicites.
+Les erreurs de programmation non reconnues restent des erreurs. Aucun retry
+agressif, aucune réponse factice utilisée pour remplacer un échec API.
+
+Un HTTP 429 direct sur un modèle accessible situe le refus côté fournisseur,
+indépendamment de FAISS/LangChain. Il ne précise pas lequel des plafonds du workspace
+est atteint. Vérifier usage et limites du compte Mistral ; aucune action payante
+ni changement de plan n’a été effectué. Le diagnostic enregistre statut et code,
+jamais la clé. Consulter la [documentation Mistral](https://docs.mistral.ai/).
+
+## Tests offline
+
+```powershell
+docker compose run --rm rag python -m pytest -q
+docker compose run --rm rag python -m pytest -q -m artifacts
+docker compose run --rm rag python -m pytest -q tests/test_rag_offline.py
+```
+
+`pytest.ini` limite la découverte à `tests/`. Les connexions réseau y sont interdites.
+Les mocks sont explicitement des tests unitaires, jamais des générations réelles.
+Sans dataset local, les contrôles d’artefacts sont **ignorés**, pas réussis :
+reconstruire puis exécuter `pytest -m artifacts` pour valider les données.
+Le contrôle de fraîcheur utilise la date du jour, sauf rejeu historique explicite
+avec `PULS_REFERENCE_DATE`. Les nombres d’événements ne sont plus figés sur un ancien export.
+
+## Évaluation
+
+```powershell
+docker compose run --rm rag python -m scripts.evaluate_rag
+docker compose run --rm rag python -m scripts.evaluate_rag --generate --judge --output reports/generated/rag_generation_evaluation.json
+```
+
+La première commande évalue la récupération d’UID (précision, rappel, rang réciproque).
+Elle nécessite Mistral pour les embeddings des questions. Les cas hors périmètre
+et ambiguës sont traités séparément. Les questions sont ciblées : ces scores
+ne prouvent pas la qualité sur toutes les demandes ouvertes.
+
+La seconde ajoute la génération puis une grille sémantique explicite : fidélité,
+pertinence de réponse, précision et rappel du contexte. Cette alternative légère
+reprend les axes du cours et borne le coût à un appel de jugement par réponse.
+Elle **n’est pas une exécution de Ragas**, ni une prétendue reproduction exacte de ses métriques.
+Ragas n’est pas déclaré incompatible : ce choix limite les dépendances et les appels
+supplémentaires dans un compte déjà soumis à un blocage chat. Un jugement Mistral
+reste imparfait ; une revue humaine est nécessaire.
+
+Les 25 références sont extraites des données vérifiées, jamais des sorties du modèle.
+Le champ `human_reviewed=false` indique que leur validation humaine reste à faire.
+Les résultats sont enregistrés après chaque cas. Sur 429, le script s’arrête avec
+un code de sortie non nul et conserve les cas exécutés. Aucune moyenne ne doit
+être présentée sans vérifier le nombre de cas terminés et le statut du rapport.
+
+## Limites et production
+
+Le POC ne gère ni mémoire conversationnelle, ni concurrence de reconstruction,
+ni extraction automatique robuste des filtres, ni validation déterministe complète
+des affirmations du LLM. Il dépend du quota et de la disponibilité Mistral.
+Le snapshot ne reflète pas les ajouts ou annulations intervenus après acquisition.
+
+Pour une version de production : planifier acquisition et validation de fraîcheur,
+versionner les snapshots et modèles, protéger les clés dans un gestionnaire de secrets,
+prévoir supervision des erreurs/latences/coûts, revue régulière des annotations,
+tests de non-régression et suivi du feedback. Mettre en place une activation
+atomique par versions et une politique de sauvegarde. Comparer d’autres index
+FAISS seulement si le volume ou la latence le justifie.
+
+## Livrables et sources
+
+La mission exige également un rapport **5 à 10 pages**, une présentation
+**10 à 15 diapositives**, une démo et un ZIP avec la convention de nommage demandée.
+Les éléments techniques sont documentés dans `docs/` ; un document Markdown seul
+ne constitue pas un rapport Word/PDF ou un PowerPoint final.
+
+Autorité : Mission.docx, version jointe Mission(7), identique à Mission(6).
+Référence complémentaire : Cours_Mettez en place un RAG pour un LLM.docx,
+lu intégralement ; ses anciens exemples SDK ne sont pas recopiés tels quels.
+Documentation technique : [LangChain](https://docs.langchain.com/),
+[FAISS](https://github.com/facebookresearch/faiss), [Mistral](https://docs.mistral.ai/).
+
+Autrice du projet : Hassna EL-BOUSIYDY.

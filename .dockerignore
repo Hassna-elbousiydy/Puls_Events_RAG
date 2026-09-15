@@ -18,3 +18,9 @@ credentials*
 
 .rebuild-*/
 **/*.previous-*/
+
+.refresh-*/
+refreshed_snapshot/
+
+.venv/
+venv/
