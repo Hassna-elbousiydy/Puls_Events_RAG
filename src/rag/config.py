@@ -4,7 +4,7 @@ import httpx
 from dotenv import load_dotenv
 from langchain_mistralai import ChatMistralAI
 
-DEFAULT_CHAT_MODEL = 'mistral-small-2603'
+DEFAULT_CHAT_MODEL = 'ministral-8b-2512'
 
 
 def make_chat(model_name: str | None = None, max_tokens: int = 600):
