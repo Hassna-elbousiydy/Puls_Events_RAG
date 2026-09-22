@@ -545,7 +545,7 @@ Le LLM juge reste imparfait : les résultats sont donc interprétés conjointeme
 Rapport final de référence :
 
 ```text
-reports/generated/rag_evaluation_final_corrected_20260922.json
+reports/final/rag_evaluation_final_20260922.json
 ```
 
 État :

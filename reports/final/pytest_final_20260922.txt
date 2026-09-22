@@ -1,0 +1,11 @@
+ Container 04_puls_events_rag-rag-run-364f1380c169 Creating
+ Container 04_puls_events_rag-rag-run-364f1380c169 Created
+........................................................................ [ 97%]
+..                                                                       [100%]
+=============================== warnings summary ===============================
+src/rag/retrieval.py:25
+  /app/src/rag/retrieval.py:25: DeprecationWarning: `langchain-community` is being sunset and is no longer actively maintained. See https://github.com/langchain-ai/langchain-community/issues/674 for details and migration guidance toward standalone integration packages.
+    from langchain_community.vectorstores import FAISS
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+74 passed, 1 warning in 85.42s (0:01:25)

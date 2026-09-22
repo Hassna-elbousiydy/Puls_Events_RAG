@@ -512,7 +512,7 @@ Le jugement automatique reste donc une estimation et doit être interprété ave
 Le rapport final utilisé est :
 
 ```text
-reports/generated/rag_evaluation_final_corrected_20260922.json
+reports/final/rag_evaluation_final_20260922.json
 ```
 
 État :

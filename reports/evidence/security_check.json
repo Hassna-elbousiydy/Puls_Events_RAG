@@ -1,6 +1,0 @@
-{
-  "candidate_secret_matches": 0,
-  "history_secret_matches": 0,
-  "tracked_env": false,
-  "scope": "Exact secrets from supplied environment, every candidate file and every reachable Git blob. Not a guarantee against unknown secrets."
-}
