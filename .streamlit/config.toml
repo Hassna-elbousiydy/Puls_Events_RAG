@@ -1,10 +1,10 @@
-﻿[theme]
-base = "dark"
-primaryColor = "#8B5CF6"
-backgroundColor = "#070B14"
-secondaryBackgroundColor = "#111827"
-textColor = "#F8FAFC"
-font = "sans serif"
+[theme]
+base = "light"
+primaryColor = "#5568FF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F7F9FC"
+textColor = "#1F2937"
+font = "sans-serif"
 
 [server]
 headless = true
