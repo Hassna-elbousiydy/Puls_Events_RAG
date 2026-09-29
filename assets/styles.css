@@ -1,6 +1,7 @@
-﻿/* =========================================================
+/* =========================================================
    PULS EVENTS
    Public / Portfolio Interface
+   Clean version for Streamlit 1.64+
    ========================================================= */
 
 :root {
@@ -34,9 +35,9 @@
             transparent 25%
         ),
         var(--bg);
+
     color: var(--text);
 }
-
 
 .block-container {
     max-width: 1160px;
@@ -44,21 +45,17 @@
     padding-bottom: 4rem;
 }
 
-
 #MainMenu {
     visibility: hidden;
 }
-
 
 footer {
     visibility: hidden;
 }
 
-
 header[data-testid="stHeader"] {
     background: transparent !important;
 }
-
 
 div[data-testid="stToolbar"] {
     visibility: hidden;
@@ -83,14 +80,15 @@ section[data-testid="stSidebar"] {
         );
 
     border-right:
-        1px solid rgba(255,255,255,0.07);
+        1px solid rgba(255, 255, 255, 0.07);
 }
-
 
 section[data-testid="stSidebar"] .block-container {
     padding-top: 2rem;
 }
 
+
+/* Brand */
 
 .sidebar-brand {
     display: flex;
@@ -98,7 +96,6 @@ section[data-testid="stSidebar"] .block-container {
     gap: 12px;
     margin-bottom: 2rem;
 }
-
 
 .sidebar-logo {
     width: 38px;
@@ -124,7 +121,6 @@ section[data-testid="stSidebar"] .block-container {
         0 10px 30px rgba(109, 93, 251, 0.28);
 }
 
-
 .sidebar-brand-name {
     color: #FFFFFF;
     font-size: 1.15rem;
@@ -132,15 +128,18 @@ section[data-testid="stSidebar"] .block-container {
     letter-spacing: -0.03em;
 }
 
-
 .sidebar-brand-tagline {
     margin-top: 2px;
-
     color: #AAB6C8;
-
     font-size: 0.74rem;
 }
 
+
+/* Sidebar headings / normal text
+   IMPORTANT:
+   Do NOT style every div/span in the sidebar.
+   Streamlit widgets also use spans internally.
+*/
 
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
@@ -149,13 +148,13 @@ section[data-testid="stSidebar"] h4 {
     color: #FFFFFF !important;
 }
 
-
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] span {
+section[data-testid="stSidebar"] label {
     color: #F8FAFC !important;
 }
 
+section[data-testid="stSidebar"] .stMarkdown p {
+    color: #F8FAFC !important;
+}
 
 section[data-testid="stSidebar"] .stCaption,
 section[data-testid="stSidebar"] small {
@@ -164,12 +163,18 @@ section[data-testid="stSidebar"] small {
 }
 
 
-section[data-testid="stSidebar"]
-div[data-baseweb="select"] > div,
+/* =========================================================
+   SIDEBAR — SELECTBOX
+   ========================================================= */
 
 section[data-testid="stSidebar"]
-div[data-baseweb="input"] > div {
+div[data-testid="stSelectbox"] > div > div {
+    border-radius: 12px !important;
+}
 
+/* Fallback for existing selectbox DOM */
+section[data-testid="stSidebar"]
+div[data-baseweb="select"] > div {
     background:
         rgba(255,255,255,0.96) !important;
 
@@ -180,29 +185,121 @@ div[data-baseweb="input"] > div {
         12px !important;
 }
 
-
 section[data-testid="stSidebar"]
-div[data-baseweb="select"] *,
-
-section[data-testid="stSidebar"]
-div[data-baseweb="input"] input {
-
-    color:
-        #111827 !important;
+div[data-baseweb="select"] * {
+    color: #111827 !important;
 }
 
+
+/* =========================================================
+   SIDEBAR — DATE INPUT
+   STREAMLIT 1.62+ / 1.64
+   DateInput now uses segmented React Aria fields.
+   ========================================================= */
+
+/* Whole date widget */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"] {
+    color: #F8FAFC;
+}
+
+
+/* Keep Du / Au labels white */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"] label,
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"] label * {
+    color: #F8FAFC !important;
+    -webkit-text-fill-color: #F8FAFC !important;
+}
+
+
+/* White date field container */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+[data-testid="stDateInputFieldsScroller"] {
+    background: #FFFFFF !important;
+}
+
+
+/*
+   CRITICAL FIX FOR STREAMLIT 1.64:
+   individual DD / MM / YYYY fields are React Aria
+   segments with role="spinbutton".
+*/
+
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+[role="spinbutton"] {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    opacity: 1 !important;
+
+    font-weight: 600 !important;
+    caret-color: transparent !important;
+}
+
+
+/* Empty date segments / placeholders */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+[role="spinbutton"][data-placeholder="true"] {
+    color: #64748B !important;
+    -webkit-text-fill-color: #64748B !important;
+    opacity: 1 !important;
+}
+
+
+/* Slash separators between DD / MM / YYYY */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+[data-type="literal"] {
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
+    opacity: 1 !important;
+}
+
+
+/* Selected segment while editing */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+[role="spinbutton"][data-focused] {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+
+    background: #3B82F6 !important;
+
+    border-radius: 5px !important;
+}
+
+
+/* Extra fallback for the date field wrapper */
+section[data-testid="stSidebar"]
+[data-testid="stDateInput"]
+div:has(> [data-testid="stDateInputFieldsScroller"]) {
+    background: #FFFFFF !important;
+    color: #111827 !important;
+
+    border-color: #CBD5E1 !important;
+}
+
+
+/* =========================================================
+   SLIDER
+   ========================================================= */
 
 section[data-testid="stSidebar"]
 .stSlider [data-baseweb="slider"] * {
-
-    color:
-        #FFFFFF !important;
+    color: #FFFFFF !important;
 }
 
 
+/* =========================================================
+   SIDEBAR BUTTON
+   ========================================================= */
+
 section[data-testid="stSidebar"]
 .stButton > button {
-
     background:
         rgba(255,255,255,0.06) !important;
 
@@ -219,10 +316,16 @@ section[data-testid="stSidebar"]
         46px;
 }
 
+section[data-testid="stSidebar"]
+.stButton > button p,
+section[data-testid="stSidebar"]
+.stButton > button span {
+    color:
+        #FFFFFF !important;
+}
 
 section[data-testid="stSidebar"]
 .stButton > button:hover {
-
     background:
         rgba(109, 93, 251, 0.18) !important;
 
@@ -259,7 +362,6 @@ section[data-testid="stSidebar"]
         0 30px 80px rgba(15, 23, 42, 0.08);
 }
 
-
 .hero-inner {
     min-height: 400px;
 
@@ -277,12 +379,10 @@ section[data-testid="stSidebar"]
         3.4rem;
 }
 
-
 .hero-copy {
     position: relative;
     z-index: 5;
 }
-
 
 .hero-badge {
     display: inline-flex;
@@ -315,7 +415,6 @@ section[data-testid="stSidebar"]
         0.07em;
 }
 
-
 .hero h1 {
     margin:
         0;
@@ -343,7 +442,6 @@ section[data-testid="stSidebar"]
         800;
 }
 
-
 .gradient-text {
     background:
         linear-gradient(
@@ -363,7 +461,6 @@ section[data-testid="stSidebar"]
         text;
 }
 
-
 .hero-subtitle {
     max-width:
         620px;
@@ -380,7 +477,6 @@ section[data-testid="stSidebar"]
     line-height:
         1.72;
 }
-
 
 .hero-location-line {
     margin-top:
@@ -425,7 +521,6 @@ section[data-testid="stSidebar"]
         0 30px 70px rgba(91, 95, 239, 0.24);
 }
 
-
 .art-glow {
     position: absolute;
 
@@ -435,7 +530,6 @@ section[data-testid="stSidebar"]
     filter:
         blur(3px);
 }
-
 
 .art-glow-one {
     width:
@@ -454,7 +548,6 @@ section[data-testid="stSidebar"]
         rgba(255,255,255,0.19);
 }
 
-
 .art-glow-two {
     width:
         170px;
@@ -471,7 +564,6 @@ section[data-testid="stSidebar"]
     background:
         rgba(96,165,250,0.26);
 }
-
 
 .art-center {
     position: absolute;
@@ -492,7 +584,6 @@ section[data-testid="stSidebar"]
         center;
 }
 
-
 .art-center span {
     display:
         block;
@@ -510,7 +601,6 @@ section[data-testid="stSidebar"]
         uppercase;
 }
 
-
 .art-center strong {
     display:
         block;
@@ -525,13 +615,14 @@ section[data-testid="stSidebar"]
         -0.04em;
 }
 
-
 .floating-card {
     position: absolute;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
     gap:
         10px;
@@ -561,7 +652,6 @@ section[data-testid="stSidebar"]
         #FFFFFF;
 }
 
-
 .floating-card-one {
     top:
         25px;
@@ -572,7 +662,6 @@ section[data-testid="stSidebar"]
     transform:
         rotate(-3deg);
 }
-
 
 .floating-card-two {
     top:
@@ -585,7 +674,6 @@ section[data-testid="stSidebar"]
         rotate(3deg);
 }
 
-
 .floating-card-three {
     bottom:
         26px;
@@ -596,7 +684,6 @@ section[data-testid="stSidebar"]
     transform:
         rotate(2deg);
 }
-
 
 .floating-icon {
     width:
@@ -624,7 +711,6 @@ section[data-testid="stSidebar"]
         1rem;
 }
 
-
 .floating-card strong {
     display:
         block;
@@ -632,7 +718,6 @@ section[data-testid="stSidebar"]
     font-size:
         0.80rem;
 }
-
 
 .floating-card span {
     display:
@@ -658,7 +743,6 @@ section[data-testid="stSidebar"]
         0 0 1rem 0;
 }
 
-
 .section-label {
     color:
         #6D5DFB;
@@ -676,7 +760,6 @@ section[data-testid="stSidebar"]
         uppercase;
 }
 
-
 .section-title {
     margin:
         5px 0 4px 0;
@@ -693,7 +776,6 @@ section[data-testid="stSidebar"]
     letter-spacing:
         -0.035em;
 }
-
 
 .section-description {
     margin:
@@ -737,13 +819,11 @@ section[data-testid="stSidebar"]
         all 0.18s ease;
 }
 
-
 .stButton > button p,
 .stButton > button span {
     color:
         #111827 !important;
 }
-
 
 .stButton > button:hover {
     transform:
@@ -763,18 +843,6 @@ section[data-testid="stSidebar"]
 }
 
 
-/* Sidebar override */
-section[data-testid="stSidebar"]
-.stButton > button p,
-
-section[data-testid="stSidebar"]
-.stButton > button span {
-
-    color:
-        #FFFFFF !important;
-}
-
-
 /* =========================================================
    CHAT
    ========================================================= */
@@ -786,7 +854,6 @@ div[data-testid="stChatInput"] {
     border-radius:
         18px;
 }
-
 
 div[data-testid="stChatInput"] > div {
     background:
@@ -802,12 +869,10 @@ div[data-testid="stChatInput"] > div {
         0 10px 35px rgba(15, 23, 42, 0.06);
 }
 
-
 div[data-testid="stChatInput"] textarea {
     color:
         #111827 !important;
 }
-
 
 div[data-testid="stChatMessage"] {
     margin-bottom:
@@ -828,7 +893,6 @@ div[data-testid="stChatMessage"] {
     box-shadow:
         0 10px 30px rgba(15,23,42,0.035);
 }
-
 
 div[data-testid="stChatMessage"] p {
     color:
@@ -853,7 +917,6 @@ div[data-testid="stChatMessage"] p {
     margin-top:
         12px;
 }
-
 
 .event-card {
     display:
@@ -883,7 +946,6 @@ div[data-testid="stChatMessage"] p {
     box-shadow:
         0 14px 35px rgba(15,23,42,0.06);
 }
-
 
 .event-number {
     display:
@@ -920,7 +982,6 @@ div[data-testid="stChatMessage"] p {
         800;
 }
 
-
 .event-title {
     margin-bottom:
         13px;
@@ -938,7 +999,6 @@ div[data-testid="stChatMessage"] p {
         1.42;
 }
 
-
 .event-meta {
     display:
         flex;
@@ -949,7 +1009,6 @@ div[data-testid="stChatMessage"] p {
     gap:
         7px;
 }
-
 
 .meta-row {
     display:
@@ -971,7 +1030,6 @@ div[data-testid="stChatMessage"] p {
         1.45;
 }
 
-
 .meta-icon {
     width:
         16px;
@@ -982,7 +1040,6 @@ div[data-testid="stChatMessage"] p {
     font-weight:
         700;
 }
-
 
 .event-link {
     display:
@@ -1006,7 +1063,6 @@ div[data-testid="stChatMessage"] p {
     text-decoration:
         none !important;
 }
-
 
 .event-link:hover {
     color:
@@ -1066,7 +1122,6 @@ div[data-testid="stExpander"] {
         0.76rem;
 }
 
-
 .footer-brand {
     color:
         #475569;
@@ -1074,7 +1129,6 @@ div[data-testid="stExpander"] {
     font-weight:
         750;
 }
-
 
 .footer-text {
     color:
@@ -1086,9 +1140,7 @@ div[data-testid="stExpander"] {
    RESPONSIVE
    ========================================================= */
 
-@media (
-    max-width: 900px
-) {
+@media (max-width: 900px) {
 
     .hero-inner {
         grid-template-columns:
@@ -1098,42 +1150,34 @@ div[data-testid="stExpander"] {
             2.2rem;
     }
 
-
     .hero-art {
         min-height:
             280px;
     }
 
-
     .source-grid {
         grid-template-columns:
             1fr;
     }
-
 }
 
 
-@media (
-    max-width: 650px
-) {
+@media (max-width: 650px) {
 
     .hero-inner {
         padding:
             1.5rem;
     }
 
-
     .hero h1 {
         font-size:
             2.45rem;
     }
 
-
     .hero-art {
         min-height:
             250px;
     }
-
 
     .floating-card {
         min-width:
@@ -1142,5 +1186,4 @@ div[data-testid="stExpander"] {
         padding:
             9px 10px;
     }
-
 }

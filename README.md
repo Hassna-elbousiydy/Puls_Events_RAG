@@ -1,17 +1,63 @@
 # Puls-Events RAG
 
-POC de recommandation d’événements culturels développé dans le cadre de la formation OpenClassrooms Data Engineer.
+POC d’assistant de recommandation d’événements culturels réalisé dans le cadre de la formation **Data Engineer OpenClassrooms**.
 
-Le système utilise les données publiques OpenAgenda sur le périmètre **Pays de la Loire** et met en œuvre une architecture **RAG (Retrieval-Augmented Generation)** avec :
+Le projet s’appuie sur les données publiques OpenAgenda pour la région **Pays de la Loire** et met en œuvre une architecture **RAG — Retrieval-Augmented Generation**.
 
-- Python / Pandas pour l’acquisition et le prétraitement ;
-- LangChain pour l’orchestration ;
-- `mistral-embed` pour les embeddings ;
-- FAISS CPU pour la recherche vectorielle ;
-- un modèle de chat Mistral pour générer les réponses ;
-- un jeu d’évaluation de 25 questions-réponses validées humainement.
+L’objectif est de permettre à un utilisateur de poser une question en langage naturel, par exemple :
 
-Le POC est fonctionnel de bout en bout : acquisition, prétraitement, vectorisation, retrieval, génération, évaluation et tests automatisés.
+> Quels concerts puis-je découvrir à Nantes ?
+
+ou :
+
+> Quand et où rencontrer Abigail Assor à Angers le 15 septembre 2026 ?
+
+Le système recherche d’abord les événements pertinents dans un index FAISS, puis transmet le contexte récupéré à Mistral afin de produire une réponse fondée sur les données disponibles.
+
+---
+
+## Objectifs du projet
+
+Le POC devait permettre de :
+
+- récupérer et nettoyer les données OpenAgenda ;
+- limiter les données au périmètre géographique retenu ;
+- conserver un historique récent d’un an ainsi que les événements futurs ;
+- découper les contenus en chunks ;
+- produire des embeddings avec Mistral ;
+- construire un index vectoriel FAISS ;
+- effectuer une recherche sémantique ;
+- appliquer des filtres métier sur la ville et les dates ;
+- générer une réponse à partir du contexte récupéré ;
+- évaluer séparément le retrieval et la génération ;
+- fournir un environnement reproductible avec Docker ;
+- disposer de tests automatisés ;
+- permettre une démonstration locale via une interface Streamlit.
+
+---
+
+## Résultats du POC
+
+Le snapshot final utilisé pour l’évaluation contient :
+
+| Élément | Résultat |
+|---|---:|
+| Événements uniques | 12 763 |
+| Chunks indexés | 14 547 |
+| Cas d’évaluation | 25 / 25 |
+| Tests automatisés | 74 passed |
+| UID Recall | 1.0000 |
+| MRR | 0.9545 |
+| Faithfulness | 0.9160 |
+| Answer Relevancy | 0.8980 |
+| Context Precision | 0.8620 |
+| Context Recall | 0.7740 |
+
+Date de référence du snapshot final :
+
+```text
+2026-09-21
+```
 
 ---
 
@@ -19,21 +65,99 @@ Le POC est fonctionnel de bout en bout : acquisition, prétraitement, vectorisat
 
 ```mermaid
 flowchart TD
-  A[OpenAgenda via OpenDataSoft] --> B[Nettoyage et filtrage]
-  B --> C[Chunks + métadonnées]
-  C --> D[mistral-embed]
-  D --> E[FAISS IndexFlatL2]
 
-  Q[Question utilisateur + filtres] --> R[Embedding de la question]
-  R --> E
-  E --> S[Événements les plus pertinents]
-  S --> CXT[Construction du contexte]
-  CXT --> P[Prompt LangChain]
-  P --> M[Chat Mistral]
-  M --> F[Réponse française sourcée]
+    A[OpenAgenda / OpenDataSoft API] --> B[Prétraitement]
+    B --> C[Chunks + métadonnées]
+    C --> D[mistral-embed]
+    D --> E[FAISS IndexFlatL2]
+
+    UI[Interface Streamlit] --> Q[Question utilisateur]
+    Q --> R[Embedding de la question]
+    R --> E
+
+    E --> F[Retrieval FAISS]
+    F --> G[Filtres ville / dates]
+    G --> H[Déduplication par UID]
+    H --> I[Contexte structuré]
+
+    I --> J[LangChain]
+    J --> K[Mistral]
+    K --> L[Réponse]
+    L --> UI
 ```
 
-Le système ne conserve pas d’historique conversationnel, conformément au périmètre du POC.
+Le pipeline est séparé en deux parties :
+
+### Indexation
+
+```text
+OpenAgenda
+    ↓
+Prétraitement
+    ↓
+Chunking
+    ↓
+mistral-embed
+    ↓
+FAISS
+```
+
+### Question utilisateur
+
+```text
+Question
+    ↓
+Embedding
+    ↓
+FAISS
+    ↓
+Filtres métier
+    ↓
+Déduplication UID
+    ↓
+Contexte
+    ↓
+LangChain
+    ↓
+Mistral
+    ↓
+Réponse
+```
+
+L’historique conversationnel n’est pas requis dans le périmètre du POC. Chaque question peut être traitée indépendamment.
+
+---
+
+## Technologies utilisées
+
+- Python 3.12
+- Pandas
+- LangChain
+- Mistral AI
+- `mistral-embed`
+- FAISS CPU
+- Streamlit
+- Pytest
+- Docker
+- Git
+
+Le modèle utilisé pour les embeddings est :
+
+```text
+mistral-embed
+```
+
+Dimension des vecteurs :
+
+```text
+1024
+```
+
+Le modèle de génération utilisé dans le POC est :
+
+```text
+ministral-8b-2512
+```
 
 ---
 
@@ -44,16 +168,22 @@ Environnement recommandé :
 - Python 3.12 ;
 - Docker Desktop ;
 - Git ;
-- clé API Mistral valide ;
-- conteneurs Linux sous Docker Desktop.
+- une clé API Mistral valide.
 
-Créer le fichier `.env` à partir de `.env.example` :
+Cloner le projet :
+
+```powershell
+git clone https://github.com/Hassna-elbousiydy/Puls_Events_RAG.git
+cd Puls_Events_RAG
+```
+
+Créer ensuite le fichier `.env` à partir de `.env.example` :
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Puis renseigner localement :
+Renseigner localement :
 
 ```text
 MISTRAL_API_KEY=...
@@ -64,20 +194,33 @@ La clé API ne doit jamais être versionnée dans Git.
 
 ---
 
-## Installation avec Docker
+## Gestion des dépendances
+
+Les dépendances principales sont définies dans :
+
+```text
+requirements.txt
+```
+
+Une version figée de l’environnement est également disponible dans :
+
+```text
+requirements-lock.txt
+```
+
+Construction de l’image Docker :
 
 ```powershell
-git clone https://github.com/Hassna-elbousiydy/Puls_Events_RAG.git
-cd Puls_Events_RAG
-git switch fix/complete-rag-poc
-
-Copy-Item .env.example .env
-
 docker compose build
+```
+
+Vérification des dépendances :
+
+```powershell
 docker compose run --rm rag python -m pip check
 ```
 
-Pour vérifier l’environnement :
+Vérification de l’environnement :
 
 ```powershell
 docker compose run --rm rag python scripts/check_environment.py
@@ -85,76 +228,97 @@ docker compose run --rm rag python scripts/check_environment.py
 
 ---
 
-## Configuration
-
-| Variable | Rôle | Valeur utilisée |
-|---|---|---|
-| `MISTRAL_API_KEY` | Authentification Mistral | Secret local |
-| `MISTRAL_CHAT_MODEL` | Modèle de génération | `ministral-8b-2512` |
-| `PULS_REFERENCE_DATE` | Date de référence des contrôles temporels | Date courante ou valeur explicite |
-| `SSL_CERT_FILE` / `SSL_CERT_DIR` | Certificats TLS si nécessaire | Configuration système |
-
-Le modèle utilisé pour les embeddings est :
-
-```text
-mistral-embed
-```
-
-Dimension des embeddings :
-
-```text
-1024
-```
-
-Le modèle d’embedding ne doit pas être changé sans reconstruire le vectorstore.
-
----
-
 ## Structure principale du projet
 
-| Chemin | Fonction |
+| Chemin | Rôle |
 |---|---|
+| `app.py` | Interface Streamlit locale |
+| `assets/styles.css` | Styles de l’interface |
+| `.streamlit/config.toml` | Configuration Streamlit |
 | `scripts/fetch_openagenda.py` | Acquisition des événements |
 | `scripts/preprocess_openagenda.py` | Nettoyage et filtrage |
 | `scripts/build_chunks.py` | Construction des chunks |
-| `scripts/build_vectorstore.py` | Embeddings et index FAISS |
-| `scripts/rebuild_pipeline.py` | Reconstruction complète |
-| `scripts/refresh_snapshot.py` | Rafraîchissement temporel |
-| `scripts/demo.py` | Démonstration du chatbot |
+| `scripts/build_vectorstore.py` | Embeddings et création de l’index FAISS |
+| `scripts/rebuild_pipeline.py` | Reconstruction complète du pipeline |
+| `scripts/refresh_snapshot.py` | Rafraîchissement temporel du snapshot |
+| `scripts/demo.py` | Démonstration en ligne de commande |
 | `scripts/evaluate_rag.py` | Évaluation du RAG |
-| `scripts/review_rag_evaluation.py` | Validation humaine du jeu de référence |
+| `scripts/review_rag_evaluation.py` | Validation humaine des références |
 | `src/rag/retrieval.py` | Retrieval FAISS et filtres |
 | `src/rag/pipeline.py` | Pipeline RAG et génération |
-| `src/rag/config.py` | Configuration du modèle de chat |
-| `src/rag/evaluation.py` | Jugement sémantique |
-| `data/evaluation/` | Jeu de 25 questions-réponses |
+| `src/rag/config.py` | Configuration |
+| `src/rag/evaluation.py` | Évaluation sémantique |
+| `data/evaluation/` | Benchmark de 25 questions-réponses |
 | `tests/` | Tests automatisés |
-| `reports/generated/` | Rapports générés |
-| `docs/` | Documentation technique et soutenance |
+| `reports/final/` | Preuves finales des tests et de l’évaluation |
+| `docs/` | Documentation du projet |
+
+Le vectorstore FAISS n’a pas besoin d’être versionné dans Git : il peut être reconstruit à partir des scripts fournis.
+
+---
+
+## Interface locale
+
+Une interface Streamlit permet d’utiliser le POC directement depuis le navigateur.
+
+Elle permet notamment :
+
+- de poser une question en langage naturel ;
+- de sélectionner éventuellement une ville ;
+- de sélectionner éventuellement une période ;
+- de choisir le nombre de suggestions ;
+- de consulter les événements proposés ;
+- d’accéder à leur source OpenAgenda.
+
+Lancement :
+
+```powershell
+docker compose run --rm -p 8501:8501 -e PULS_REFERENCE_DATE=2026-09-21 rag streamlit run app.py --server.address=0.0.0.0 --server.port=8501
+```
+
+Puis ouvrir :
+
+```text
+http://localhost:8501
+```
+
+Exemple de question utilisée pendant la démonstration :
+
+```text
+Quand et où rencontrer Abigail Assor à Angers le 15 septembre 2026 ?
+```
+
+Pour ce cas, l’événement de référence possède l’UID :
+
+```text
+60424656
+```
+
+et est retrouvé au rang 1.
 
 ---
 
 ## Source des données
 
-Le projet exploite le dataset public :
+Le projet utilise le dataset public :
 
 **Événements publics OpenAgenda**
 
-Source publique :
+Source :
 
+```text
 https://public.opendatasoft.com/explore/dataset/evenements-publics-openagenda/
+```
 
-L’acquisition automatisée utilise l’API publique du dataset OpenAgenda exposée via OpenDataSoft Explore API v2.1.
+L’acquisition automatisée utilise l’API publique OpenDataSoft Explore v2.1 exposant les données OpenAgenda.
 
-Il s’agit de l’API publique du dataset et non de l’API privée d’administration des agendas OpenAgenda.
-
-Le périmètre géographique retenu pour le POC est :
+Le périmètre retenu est :
 
 ```text
 Pays de la Loire
 ```
 
-Le jeu de données initial étudié contenait :
+Le premier export étudié contenait :
 
 ```text
 24 601 lignes
@@ -171,13 +335,13 @@ Exemple :
 docker compose run --rm rag python scripts/fetch_openagenda.py --reference-date 2026-09-21
 ```
 
-L’acquisition permet d’obtenir un snapshot exploitable et reproductible.
-
-Les fichiers sources sont conservés localement et leur empreinte SHA-256 peut être utilisée pour tracer précisément la source d’un snapshot.
+Cette étape permet de récupérer un snapshot exploitable et reproductible des données.
 
 ---
 
 ## Prétraitement
+
+Commande :
 
 ```powershell
 docker compose run --rm rag python scripts/preprocess_openagenda.py --reference-date 2026-09-21
@@ -185,41 +349,47 @@ docker compose run --rm rag python scripts/preprocess_openagenda.py --reference-
 
 Le prétraitement réalise notamment :
 
-- filtrage sur Pays de la Loire ;
-- contrôle des dates ;
-- conservation d’un historique récent d’un an ;
-- conservation des événements futurs ;
-- suppression des événements annulés ;
-- filtrage du périmètre culturel ;
-- contrôle des titres et descriptions ;
-- déduplication des UID ;
-- normalisation des informations de localisation ;
-- préparation des créneaux temporels structurés.
+- le filtrage sur la région Pays de la Loire ;
+- le contrôle des dates ;
+- la conservation d’un historique récent d’un an ;
+- la conservation des événements futurs ;
+- l’exclusion des événements annulés ;
+- le contrôle des champs essentiels ;
+- le filtrage du périmètre culturel ;
+- la déduplication par UID ;
+- la normalisation des informations géographiques ;
+- la préparation des informations temporelles structurées.
 
 ### Règle temporelle
 
 Pour une date de référence donnée, le système conserve :
 
-- les événements encore compris dans l’année historique précédente ;
+- les événements encore compris dans la période historique d’un an ;
 - les événements présents ;
-- tous les événements futurs disponibles dans le snapshot.
+- les événements futurs disponibles dans le snapshot.
 
-Les créneaux structurés sont prioritaires sur les dates éventuellement mentionnées dans les descriptions textuelles.
+Les créneaux temporels structurés sont utilisés en priorité lorsqu’ils sont disponibles.
 
 ---
 
 ## Chunking
 
-Le texte est découpé avec `RecursiveCharacterTextSplitter`.
-
-Paramètres principaux :
+Les contenus sont découpés avec :
 
 ```text
-chunk_size = 1500 caractères
-chunk_overlap = 200 caractères
+RecursiveCharacterTextSplitter
 ```
 
-Chaque chunk conserve des métadonnées permettant de retrouver l’événement d’origine :
+Paramètres :
+
+```text
+chunk_size = 1500
+chunk_overlap = 200
+```
+
+L’overlap réduit le risque de perdre une information située à la frontière entre deux chunks.
+
+Chaque chunk conserve les principales métadonnées de l’événement :
 
 - UID ;
 - titre ;
@@ -228,9 +398,7 @@ Chaque chunk conserve des métadonnées permettant de retrouver l’événement 
 - lieu ;
 - dates ;
 - URL ;
-- créneaux admissibles.
-
-L’overlap limite la perte d’information lorsqu’un contenu se situe à la frontière entre deux chunks.
+- créneaux temporels.
 
 ---
 
@@ -248,9 +416,7 @@ Dimension :
 1024
 ```
 
-Un embedding est une représentation numérique du sens d’un texte.
-
-Les questions utilisateur sont transformées dans le même espace vectoriel que les chunks afin de pouvoir rechercher les événements sémantiquement proches.
+La question utilisateur est vectorisée avec le même modèle afin de pouvoir comparer sa proximité sémantique avec les contenus indexés.
 
 ---
 
@@ -263,286 +429,253 @@ FAISS CPU
 IndexFlatL2
 ```
 
-`IndexFlatL2` effectue une recherche exacte par distance euclidienne L2.
+`IndexFlatL2` réalise une recherche exacte par distance euclidienne L2.
 
-À l’échelle actuelle du POC, cette solution est adaptée car :
+Ce choix est adapté au POC car :
 
 - le volume reste raisonnable ;
-- aucune infrastructure externe n’est nécessaire ;
 - la recherche est exacte ;
-- le fonctionnement local simplifie la reproductibilité ;
-- FAISS est explicitement adapté au besoin du POC.
+- aucune infrastructure vectorielle externe n’est nécessaire ;
+- le système peut fonctionner localement ;
+- la configuration reste simple et reproductible.
 
-Une distance plus faible correspond à une plus grande proximité vectorielle.
+Pour un volume beaucoup plus important, d’autres options pourraient être étudiées :
 
-FAISS ne génère aucune réponse : il sert uniquement à retrouver les contenus pertinents.
+- FAISS IVF ;
+- HNSW ;
+- Milvus ;
+- Weaviate ;
+- Pinecone.
 
 ---
 
-## Snapshot actif
+## Snapshot final
 
-Un rafraîchissement a été réalisé avec la date de référence :
+Date de référence :
 
 ```text
 2026-09-21
 ```
 
-Le snapshot rafraîchi contient :
+Le snapshot final contient :
 
 ```text
-14 547 chunks indexés
 12 763 événements uniques
+14 547 chunks
 ```
 
-Lors du rafraîchissement :
+Lors du dernier refresh :
 
 ```text
 549 événements expirés ont été retirés
 ```
 
-Les vecteurs existants ont été réutilisés lorsque le texte des chunks était inchangé.
+Les embeddings des chunks inchangés ont été réutilisés.
 
-Aucun nouvel appel d’embedding n’a été nécessaire pour ce rafraîchissement.
+Aucun nouvel appel d’embedding n’a été nécessaire pour ce refresh.
 
 ---
 
 ## Reconstruction complète
 
-Pour reconstruire l’ensemble du pipeline :
+Pour reconstruire le pipeline :
 
 ```powershell
 docker compose run --rm rag python -m scripts.rebuild_pipeline --reference-date 2026-09-21
 ```
 
-Le pipeline reconstruit :
+La reconstruction couvre :
 
 1. acquisition ;
 2. prétraitement ;
-3. chunks ;
+3. chunking ;
 4. embeddings ;
-5. FAISS ;
+5. création de l’index FAISS ;
 6. tests ;
-7. activation des nouveaux artefacts.
-
-Une reconstruction échouée ne doit pas remplacer automatiquement les artefacts actifs précédents.
+7. activation des artefacts produits.
 
 ---
 
-## Rafraîchissement sans recalcul des embeddings
+## Refresh temporel
 
-Pour mettre à jour la fenêtre temporelle sans recalculer tous les embeddings :
+Pour mettre à jour la fenêtre temporelle sans recalculer inutilement les embeddings :
 
 ```powershell
 docker compose run --rm rag python -m scripts.refresh_snapshot --output refreshed_snapshot --reference-date 2026-09-21
 ```
 
-Cette opération retire les événements devenus trop anciens et réutilise les vecteurs des chunks encore valides.
+Les événements devenus trop anciens sont retirés tandis que les vecteurs encore valides peuvent être réutilisés.
 
 ---
 
 ## Retrieval
 
-Le retrieval se trouve dans :
+Le retrieval est implémenté dans :
 
 ```text
 src/rag/retrieval.py
 ```
 
-Il réalise :
+Il réalise notamment :
 
-1. embedding de la question ;
-2. interrogation de FAISS ;
-3. application éventuelle de filtres structurés ;
-4. regroupement par UID ;
-5. déduplication des événements ;
-6. classement des résultats ;
-7. reconstruction du contexte transmis au LLM.
+1. l’embedding de la question ;
+2. la recherche dans FAISS ;
+3. l’application éventuelle de filtres structurés ;
+4. le regroupement des chunks par UID ;
+5. la déduplication des événements ;
+6. le classement des résultats ;
+7. la construction du contexte transmis au modèle.
 
-Le retrieval peut recevoir des filtres comme :
+Les filtres structurés disponibles comprennent notamment :
 
 - ville ;
 - date de début ;
 - date de fin.
 
-Ces filtres sont distincts de la recherche sémantique.
+Ces filtres complètent la recherche sémantique.
 
 ---
 
 ## Génération RAG
 
-La génération est orchestrée dans :
+Le pipeline principal se trouve dans :
 
 ```text
 src/rag/pipeline.py
 ```
 
-Le pipeline combine :
+La génération suit la chaîne :
 
 ```text
-Question utilisateur
-        ↓
+Question
+    ↓
 Embedding
-        ↓
+    ↓
 FAISS
-        ↓
+    ↓
 Événements pertinents
-        ↓
+    ↓
 Contexte
-        ↓
+    ↓
 Prompt LangChain
-        ↓
-Chat Mistral
-        ↓
+    ↓
+Mistral
+    ↓
 Réponse
 ```
 
-Le prompt impose notamment :
+Le prompt impose notamment de :
 
-- utiliser exclusivement les événements présents dans le contexte ;
+- s’appuyer sur le contexte fourni ;
 - ne pas inventer d’événement ;
 - ne pas inventer de date ;
 - ne pas inventer de lieu ;
 - ne pas inventer d’URL ;
 - répondre en français ;
-- signaler lorsque le contexte est insuffisant ;
-- demander une précision lorsqu’une demande est trop ambiguë.
+- signaler un contexte insuffisant ;
+- demander une précision lorsque la requête est ambiguë.
 
-Le modèle de chat est configuré avec :
+La génération utilise :
 
 ```text
 temperature = 0
 ```
 
-afin de limiter la variabilité lors de la génération.
+afin de réduire la variabilité.
 
 ---
 
-## Démonstration
+## Démonstration en ligne de commande
 
-Exemple simple :
+Exemple avec ville et date :
+
+```powershell
+docker compose run --rm rag python -m scripts.demo "Quand et où rencontrer Abigail Assor à Angers le 15 septembre 2026 ?" --city Angers --start-date 2026-09-15 --end-date 2026-09-15
+```
+
+Autre exemple :
 
 ```powershell
 docker compose run --rm rag python -m scripts.demo "Où voir Plants and People à Nantes ?" --city Nantes
 ```
 
-Exemple avec date :
-
-```powershell
-docker compose run --rm rag python -m scripts.demo "Quand rencontrer Abigail Assor ?" --city Angers --start-date 2026-09-15 --end-date 2026-09-15
-```
-
-Exemple musical :
-
-```powershell
-docker compose run --rm rag python -m scripts.demo "Quel concert propose Comme un air de jazz ?" --city Nantes
-```
-
-Exemple hors périmètre :
-
-```powershell
-docker compose run --rm rag python -m scripts.demo "Quels concerts à Paris ?" --city Paris
-```
-
-La démonstration permet d’afficher les événements retrouvés avant la réponse finale du LLM.
+La démonstration permet de voir les événements récupérés avant la génération de la réponse.
 
 ---
 
 ## Jeu d’évaluation
 
-Le benchmark contient :
+Le benchmark final contient :
 
 ```text
 25 questions-réponses
 ```
 
-Les références ont été contrôlées à partir du corpus OpenAgenda.
+Les références ont été revues humainement.
 
-État final :
-
-```text
-25 / 25 références validées humainement
-```
-
-Le jeu se trouve dans :
+Fichier :
 
 ```text
 data/evaluation/rag_evaluation.jsonl
 ```
 
-Le script de validation humaine est :
+Le jeu de référence peut contenir :
 
-```text
-scripts/review_rag_evaluation.py
-```
-
-La ground truth contient notamment :
-
-- question ;
-- réponse de référence ;
-- UID attendus lorsqu’ils existent ;
-- ville ou contraintes structurées lorsque nécessaire ;
-- notes de validation humaine.
+- la question ;
+- une réponse de référence ;
+- un ou plusieurs UID attendus ;
+- une ville ;
+- une contrainte temporelle ;
+- des informations utilisées pendant la validation humaine.
 
 ---
 
 ## Évaluation du retrieval
 
-Les métriques de retrieval utilisées sont :
+Trois métriques principales sont utilisées.
 
 ### UID Precision
 
-Part des événements récupérés correspondant aux UID attendus.
+Part des résultats retournés correspondant aux UID attendus.
 
 ### UID Recall
 
 Part des UID attendus effectivement retrouvés.
 
-### Reciprocal Rank
+### MRR
 
-Mesure la position du premier bon résultat.
+Le Mean Reciprocal Rank mesure la position du premier résultat attendu.
 
-Un résultat attendu au rang 1 donne :
-
-```text
-1.0
-```
-
-Au rang 2 :
+Par exemple :
 
 ```text
-0.5
-```
-
-Au rang 4 :
-
-```text
-0.25
+rang 1 → 1.0
+rang 2 → 0.5
+rang 4 → 0.25
 ```
 
 ---
 
 ## Évaluation de la génération
 
-La génération est également évaluée à l’aide d’un juge Mistral avec une grille explicite.
-
-Les quatre axes sont :
+Quatre axes sont évalués :
 
 - `faithfulness` ;
 - `answer_relevancy` ;
 - `context_precision` ;
 - `context_recall`.
 
-Cette approche reprend les grandes dimensions utilisées pour l’évaluation des systèmes RAG.
+Ces axes sont évalués par un juge Mistral utilisant une grille explicite.
 
-Elle ne constitue pas une exécution directe de Ragas.
+Ils sont inspirés de métriques classiques d’évaluation RAG mais ne correspondent pas à une exécution directe de la librairie Ragas.
 
-Le LLM juge reste imparfait : les résultats sont donc interprétés conjointement avec les métriques déterministes et la validation humaine.
+Le jugement du LLM est interprété conjointement avec les métriques déterministes et la validation humaine.
 
 ---
 
 ## Résultats finaux
 
-Rapport final de référence :
+Rapport d’évaluation final :
 
 ```text
 reports/final/rag_evaluation_final_20260922.json
@@ -561,82 +694,48 @@ status = completed
 
 | Métrique | Score |
 |---|---:|
-| UID precision | 0.2212 |
-| UID recall | **1.0000** |
-| Reciprocal Rank / MRR | **0.9545** |
+| UID Precision | 0.2212 |
+| UID Recall | **1.0000** |
+| MRR | **0.9545** |
 
-### Interprétation
+Le rappel UID à `1.0000` signifie que tous les UID de référence concernés par cette métrique ont été retrouvés.
 
-Le `UID recall = 1.0000` indique que les événements attendus ont été retrouvés dans tous les cas possédant une ground truth UID exploitable.
+Le MRR de `0.9545` indique que le résultat attendu apparaît généralement très haut dans le classement.
 
-Le MRR de `0.9545` indique que les événements attendus apparaissent généralement dans les toutes premières positions.
+La précision UID de `0.2212` est plus faible car le retriever retourne plusieurs candidats alors que la ground truth n’attend souvent qu’un nombre limité d’événements.
 
-La précision UID de `0.2212` est plus faible car le retriever retourne plusieurs candidats alors que la ground truth attend souvent un ou deux événements seulement.
+Elle ne doit donc pas être interprétée comme un taux global de réponses correctes.
 
-Elle ne signifie donc pas que seulement 22 % des réponses du chatbot sont correctes.
-
----
-
-## Résultats de génération
+### Génération et contexte
 
 | Métrique | Score |
 |---|---:|
 | Faithfulness | **0.9160** |
-| Answer relevancy | **0.8980** |
-| Context precision | **0.8620** |
-| Context recall | **0.7740** |
+| Answer Relevancy | **0.8980** |
+| Context Precision | **0.8620** |
+| Context Recall | **0.7740** |
 
-### Faithfulness
-
-```text
-0.9160
-```
-
-Les réponses sont très majoritairement fondées sur les informations du contexte récupéré.
-
-### Answer relevancy
-
-```text
-0.8980
-```
-
-Les réponses correspondent généralement bien à la demande utilisateur.
-
-### Context precision
-
-```text
-0.8620
-```
-
-Les événements transmis au modèle sont globalement pertinents.
-
-### Context recall
-
-```text
-0.7740
-```
-
-Le contexte contient généralement les informations importantes, mais certains cas récupèrent également des événements secondaires ou ne couvrent pas parfaitement toute la référence.
+Le principal axe d’amélioration reste la couverture du contexte utile.
 
 ---
 
-## Analyse d’un cas d’évaluation
+## Qualité de la ground truth
 
-Le cas `q08` a mis en évidence une ambiguïté dans le benchmark.
+Le cas `q08` a montré l’importance de vérifier la qualité du benchmark.
 
-La question initiale pouvait correspondre à plusieurs occurrences de :
+La formulation initiale pouvait correspondre à plusieurs occurrences de :
 
 ```text
 Cartophote / La Traversée Photographique
 ```
 
-La question a donc été précisée pour cibler :
+La question a été précisée avec la date :
 
 ```text
 17 septembre 2026
 ```
 
-et le filtre temporel structuré a été aligné avec la ground truth.
+et la ground truth a été revérifiée.
 
 Après correction :
 
@@ -645,40 +744,15 @@ UID attendu : 90151893
 UID rank     : 1
 UID recall   : 1.0
 MRR          : 1.0
-faithfulness : 1.0
-context precision : 0.95
-context recall    : 0.8
 ```
 
-Ce cas montre l’importance de contrôler la qualité du benchmark avant d’interpréter les performances d’un RAG.
-
----
-
-## Cas sans UID attendu
-
-Certaines questions du benchmark ne possèdent volontairement pas d’UID attendu.
-
-Exemples :
-
-```text
-Recommande-moi un concert à Paris.
-Quels événements proposez-vous à Guangzhou ?
-Je veux sortir.
-```
-
-Ces cas permettent de tester :
-
-- les requêtes hors périmètre ;
-- les demandes ambiguës ;
-- le comportement du système lorsqu’aucun événement de référence précis n’est attendu.
-
-Les métriques UID ne sont donc pas applicables à ces questions.
+Cet exemple montre qu’une référence ambiguë peut faire croire à tort que le système RAG est défaillant.
 
 ---
 
 ## Tests automatisés
 
-Commande finale utilisée :
+Commande finale :
 
 ```powershell
 docker compose run --rm -e PULS_REFERENCE_DATE=2026-09-21 rag pytest -q
@@ -690,231 +764,155 @@ Résultat :
 74 passed, 1 warning
 ```
 
-Le warning restant concerne :
-
-```text
-langchain-community
-```
-
-et son évolution vers des packages d’intégration spécialisés.
-
-Il n’est pas bloquant pour le fonctionnement actuel du POC.
-
 Les tests couvrent notamment :
 
-- prétraitement ;
-- règles temporelles ;
-- filtrage géographique ;
-- chunking ;
-- vectorstore ;
-- retrieval ;
-- construction du contexte ;
-- reporting d’évaluation ;
-- comportement des métriques ;
-- artefacts du pipeline.
+- le prétraitement ;
+- les règles temporelles ;
+- le périmètre géographique ;
+- le chunking ;
+- le vectorstore ;
+- FAISS ;
+- le retrieval ;
+- la reconstruction du contexte ;
+- les métriques d’évaluation ;
+- les artefacts du pipeline.
+
+Le warning restant n’est pas bloquant pour le fonctionnement du POC.
 
 ---
 
 ## Reproductibilité
 
-Pour reproduire les tests avec le snapshot final :
+La date de référence est explicitement fournie dans les commandes de validation :
 
-```powershell
-docker compose run --rm -e PULS_REFERENCE_DATE=2026-09-21 rag pytest -q
+```text
+PULS_REFERENCE_DATE=2026-09-21
 ```
 
-La date de référence est explicitement fournie pour éviter qu’un événement sorte automatiquement de la fenêtre d’un an lorsque le test est exécuté plus tard.
+Cela évite que les résultats des tests changent uniquement parce que la date courante avance.
+
+Le projet utilise Docker afin de stabiliser l’environnement d’exécution et les dépendances.
 
 ---
 
-## Limites du POC
+## Limites actuelles
 
 Le projet reste un POC.
 
-Limites connues :
+Principales limites :
 
-- pas de mémoire conversationnelle ;
-- filtres géographiques et temporels pas toujours extraits automatiquement de la question libre ;
-- dépendance à l’API Mistral ;
-- disponibilité et quotas du fournisseur externe ;
-- dataset OpenAgenda évolutif ;
-- filtre culturel basé en partie sur des règles lexicales ;
-- certaines informations de ville peuvent manquer dans la source ;
-- `IndexFlatL2` n’est pas destiné à des volumes massifs ;
-- le LLM peut encore interpréter incorrectement un contexte pourtant pertinent ;
-- le LLM juge possède lui-même une part de variabilité ;
-- pas d’interface Web de production ;
-- pas d’orchestration planifiée de la reconstruction.
+- absence de mémoire conversationnelle ;
+- extraction automatique de la ville et de la période encore limitée ;
+- dépendance à l’API Mistral et à ses quotas ;
+- dépendance à la qualité des données OpenAgenda ;
+- certaines informations peuvent être absentes dans la source ;
+- filtre culturel reposant en partie sur des règles métier ;
+- `IndexFlatL2` n’est pas adapté à des volumes massifs ;
+- variabilité résiduelle du LLM ;
+- variabilité du LLM utilisé comme juge ;
+- interface Streamlit disponible localement mais pas encore déployée publiquement ;
+- absence de haute disponibilité ;
+- absence de monitoring de production ;
+- refresh et reconstruction non encore planifiés automatiquement.
 
 ---
 
 ## Passage en production
 
-Pour une version de production, plusieurs améliorations seraient nécessaires :
+Pour passer du POC à une version de production, les étapes principales seraient :
 
-- planification régulière de l’acquisition OpenAgenda ;
-- reconstruction ou mise à jour automatisée du vectorstore ;
-- versionnement des snapshots ;
-- monitoring de la latence ;
-- monitoring du taux d’erreur ;
-- monitoring des coûts API ;
-- gestion des secrets ;
-- logs structurés ;
-- stratégie de retry contrôlée ;
-- tests de non-régression ;
-- collecte du feedback utilisateur ;
-- suivi du drift des données ;
-- revue régulière du benchmark ;
-- API ou interface utilisateur dédiée.
-
-Pour un volume beaucoup plus important, il serait également pertinent de comparer :
-
-- FAISS IVF ;
-- FAISS HNSW ;
-- Pinecone ;
-- Weaviate ;
-- Milvus.
+1. automatiser l’acquisition OpenAgenda et le refresh ;
+2. conserver et versionner les snapshots ;
+3. déployer l’interface et sécuriser les secrets ;
+4. extraire automatiquement ville, période et catégorie depuis les questions ;
+5. mettre en place des logs structurés ;
+6. superviser les erreurs API et la disponibilité ;
+7. suivre la latence retrieval et génération ;
+8. surveiller les coûts et les tokens ;
+9. collecter le feedback utilisateur ;
+10. enrichir régulièrement le benchmark ;
+11. automatiser les tests de non-régression ;
+12. suivre les dérives des données et des performances ;
+13. faire évoluer l’index vectoriel si le volume augmente fortement.
 
 ---
 
-## Pourquoi FAISS ?
+## Sécurité
 
-FAISS a été retenu car :
+Les secrets ne doivent jamais être versionnés.
 
-- le POC doit fonctionner localement ;
-- le volume reste compatible avec une recherche exacte ;
-- il n’y a pas besoin de base vectorielle managée ;
-- les données restent maîtrisées localement ;
-- la configuration est simple ;
-- `IndexFlatL2` fournit une baseline exacte.
+Le fichier :
 
-Pinecone, Weaviate ou Milvus deviendraient plus intéressants si le projet nécessitait :
+```text
+.env
+```
 
-- montée en charge importante ;
-- haute disponibilité ;
-- recherche distribuée ;
-- service distant multi-utilisateur ;
-- administration centralisée.
+reste local.
+
+Le dépôt contient uniquement :
+
+```text
+.env.example
+```
+
+sans clé API réelle.
 
 ---
 
-## Pourquoi LangChain ?
+## Preuves finales
 
-LangChain sert ici d’orchestrateur entre :
+Les preuves produites lors de la validation finale se trouvent dans :
 
-- question utilisateur ;
-- retrieval ;
-- contexte ;
-- prompt ;
-- modèle Mistral.
+```text
+reports/final/
+```
 
-Il permet de séparer clairement les différentes briques du RAG.
+Elles comprennent notamment :
 
-LangChain n’est ni le LLM ni la base vectorielle.
+```text
+rag_evaluation_final_20260922.json
+pytest_final_20260922.txt
+```
+
+Ces fichiers permettent de conserver une trace de l’évaluation finale et des tests exécutés.
 
 ---
 
-## Pourquoi Mistral ?
+## Livrables associés
 
-Mistral AI fournit les modèles utilisés pour :
+Le projet fournit :
 
-- les embeddings ;
-- la génération ;
-- le jugement sémantique de l’évaluation.
+- le code du système RAG ;
+- les scripts d’acquisition et de preprocessing ;
+- les scripts de vectorisation et de gestion de l’index ;
+- les tests automatisés ;
+- le fichier de gestion des dépendances ;
+- le benchmark de 25 questions-réponses ;
+- les preuves d’évaluation ;
+- le README de reproduction ;
+- l’interface Streamlit locale.
 
-Dans ce projet :
-
-```text
-Embedding : mistral-embed
-Chat      : ministral-8b-2512
-```
-
----
-
-## Livrables
-
-Les livrables techniques du projet comprennent :
-
-- code Python versionné avec Git ;
-- environnement reproductible ;
-- README ;
-- scripts d’acquisition et de prétraitement ;
-- vectorstore FAISS ;
-- pipeline RAG ;
-- scripts de test ;
-- jeu de 25 questions-réponses annotées ;
-- rapport d’évaluation ;
-- rapport technique ;
-- démonstration ;
-- présentation de soutenance.
-
-Les versions finales Word/PDF et PowerPoint sont préparées séparément à partir des documents présents dans `docs/`.
+Le rapport technique et la présentation de soutenance sont fournis séparément dans les livrables OpenClassrooms.
 
 ---
 
-## État final du POC
+## État final
 
-### Acquisition
+| Composant | État |
+|---|---|
+| Acquisition | ✅ |
+| Prétraitement | ✅ |
+| Chunking | ✅ |
+| Embeddings Mistral | ✅ |
+| FAISS | ✅ |
+| Retrieval | ✅ |
+| Génération Mistral | ✅ |
+| Interface Streamlit | ✅ |
+| Benchmark humain | ✅ 25 / 25 |
+| Évaluation | ✅ 25 / 25 |
+| Tests | ✅ 74 passed |
 
-```text
-OK
-```
-
-### Prétraitement
-
-```text
-OK
-```
-
-### Chunking
-
-```text
-OK
-```
-
-### Embeddings Mistral
-
-```text
-OK
-```
-
-### FAISS
-
-```text
-OK
-```
-
-### Retrieval
-
-```text
-OK
-```
-
-### Génération Mistral
-
-```text
-OK
-```
-
-### Jeu de référence
-
-```text
-25 / 25 validé humainement
-```
-
-### Évaluation finale
-
-```text
-25 / 25 completed
-```
-
-### Tests
-
-```text
-74 passed
-```
-
-Le POC technique est donc fonctionnel et évalué.
+Le POC est fonctionnel, testé et reproductible.
 
 ---
 
