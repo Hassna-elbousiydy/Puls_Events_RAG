@@ -1,18 +1,30 @@
 # Puls-Events RAG
 
-POC d’assistant de recommandation d’événements culturels réalisé dans le cadre de la formation **Data Engineer OpenClassrooms**.
+**Assistant RAG de découverte et de recommandation d’événements culturels à partir de données publiques OpenAgenda.**
 
-Le projet s’appuie sur les données publiques OpenAgenda pour la région **Pays de la Loire** et met en œuvre une architecture **RAG — Retrieval-Augmented Generation**.
+Puls-Events combine **ingestion et préparation de données**, **recherche sémantique**, **filtres métier** et **génération augmentée par retrieval** pour répondre à des questions en langage naturel sur les événements culturels en Pays de la Loire.
 
-L’objectif est de permettre à un utilisateur de poser une question en langage naturel, par exemple :
+![Interface principale de Puls-Events RAG](images/puls-events-interface.png)
 
-> Quels concerts puis-je découvrir à Nantes ?
+**Stack :** Python 3.12, Pandas, LangChain, Mistral AI, FAISS, Streamlit, Docker, Pytest
 
-ou :
+**Snapshot évalué :** 12 763 événements uniques, 14 547 chunks, 25/25 cas exécutés, 74 tests automatisés
 
-> Quand et où rencontrer Abigail Assor à Angers le 15 septembre 2026 ?
+**Résultats clés :** MRR 0.9545, Faithfulness 0.9160, Answer Relevancy 0.8980, Context Precision 0.8620, Context Recall 0.7740
 
-Le système recherche d’abord les événements pertinents dans un index FAISS, puis transmet le contexte récupéré à Mistral afin de produire une réponse fondée sur les données disponibles.
+> **Version jury figée :** [`jury-v1.0.0`](https://github.com/Hassna-elbousiydy/Puls_Events_RAG/releases/tag/jury-v1.0.0)  commit `d8d0e1c`
+
+---
+
+## Démo
+
+Exemple de question :
+
+> **Quand et où rencontrer Abigail Assor à Angers le 15 septembre 2026 ?**
+
+Le système identifie les événements pertinents, applique les contraintes disponibles, déduplique les résultats par UID et génère une réponse à partir du contexte récupéré.
+
+![Exemple de réponse générée par Puls-Events RAG](images/puls-events-demo.png)
 
 ---
 

@@ -357,20 +357,9 @@ render_html(
                     PAYS DE LA LOIRE · SORTIES CULTURELLES
                 </div>
 
-                <h1>
-                    Et si votre prochaine
-                    <span class="gradient-text">
-                        découverte
-                    </span>
-                    était juste ici ?
-                </h1>
+                <h1>Et si votre prochaine <span class="gradient-text">découverte</span> était juste ici ?</h1>
 
-                <p class="hero-subtitle">
-                    Concerts, expositions, spectacles,
-                    festivals et découvertes locales.
-                    Dites-nous ce qui vous fait envie,
-                    Puls Events s’occupe du reste.
-                </p>
+                <p class="hero-subtitle">Concerts, expositions, spectacles, festivals et découvertes locales. Dites-nous ce qui vous fait envie, Puls Events s’occupe du reste.</p>
 
                 <div class="hero-location-line">
                     Nantes · Angers · Laval · Le Mans ·
