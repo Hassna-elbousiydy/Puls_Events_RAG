@@ -8,11 +8,10 @@ Puls-Events combine **ingestion et préparation de données**, **recherche séma
 
 **Stack :** Python 3.12, Pandas, LangChain, Mistral AI, FAISS, Streamlit, Docker, Pytest
 
-**Snapshot évalué :** 12 763 événements uniques, 14 547 chunks, 25/25 cas exécutés, 74 tests automatisés
+**Échelle & validation :** 12 763 événements uniques, 14 547 chunks indexés, 25 cas d’évaluation, 74 tests automatisés
 
 **Résultats clés :** MRR 0.9545, Faithfulness 0.9160, Answer Relevancy 0.8980, Context Precision 0.8620, Context Recall 0.7740
 
-> **Version jury figée :** [`jury-v1.0.0`](https://github.com/Hassna-elbousiydy/Puls_Events_RAG/releases/tag/jury-v1.0.0)  commit `d8d0e1c`
 
 ---
 
